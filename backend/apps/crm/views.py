@@ -6,13 +6,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.crm.api.serializers import (
-    AudienceBuilderRequestSerializer,
-    AudienceBuilderResponseSerializer,
-    CampaignCopilotRequestSerializer,
-    CampaignCopilotResponseSerializer,
-    CommunicationReceiptSerializer,
-)
 from apps.crm.models import (
     Campaign,
     CampaignStatus,
@@ -29,6 +22,11 @@ from apps.crm.serializers import (
     CustomerSerializer,
     OrderSerializer,
     SegmentSerializer,
+    AudienceBuilderRequestSerializer,
+    AudienceBuilderResponseSerializer,
+    CampaignCopilotRequestSerializer,
+    CampaignCopilotResponseSerializer,
+    CommunicationReceiptSerializer,
 )
 from apps.crm.services.audience_builder import (
     AudienceBuilderConfigurationError,

@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.crm.api.views import (
+from apps.crm.views import (
     AudienceBuilderView,
     CampaignCopilotView,
     CampaignViewSet,
