@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Sparkles, Users2, Filter, Wand2, Loader2, AlertCircle } from "lucide-react";
+import { Sparkles, Users2, Filter, Wand2, Loader2, AlertCircle, ShieldAlert, Trophy, Cpu, Flower2, ShoppingBag, ArrowRight, Zap } from "lucide-react";
 
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,8 +15,56 @@ import { Badge } from "@/components/ui/badge";
 import { useCustomers } from "@/hooks/use-api";
 import { useAudienceBuilder } from "@/hooks/use-api";
 import { ChannelBadge } from "@/components/status-badge";
-import { formatNum } from "@/lib/mock-data";
+import { formatNum, formatINR } from "@/lib/mock-data";
 import type { AudienceBuilderResponse } from "@/lib/api/types";
+
+const PREBUILT_SEGMENTS = [
+  {
+    name: "Churn Risk",
+    description: "Customers inactive for 180+ days. Re-engage before they're gone for good.",
+    icon: <ShieldAlert className="h-5 w-5" />,
+    color: "text-rose-500",
+    bg: "bg-rose-500/10",
+    border: "border-rose-500/20",
+    prompt: "Win back customers who haven't ordered in 6 months",
+  },
+  {
+    name: "High Value",
+    description: "Top-tier buyers with RFM score ≥ 4 or CLV in the 75th percentile.",
+    icon: <Trophy className="h-5 w-5" />,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+    border: "border-amber-500/20",
+    prompt: "Target our highest-value VIP customers with an exclusive offer",
+  },
+  {
+    name: "Electronics Buyers",
+    description: "Customers who have purchased electronics. Ideal for tech product launches.",
+    icon: <Cpu className="h-5 w-5" />,
+    color: "text-blue-500",
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/20",
+    prompt: "Re-engage electronics buyers with a new product launch",
+  },
+  {
+    name: "Beauty Buyers",
+    description: "Skincare, cosmetics and fashion accessory buyers. Perfect for beauty launches.",
+    icon: <Flower2 className="h-5 w-5" />,
+    color: "text-pink-500",
+    bg: "bg-pink-500/10",
+    border: "border-pink-500/20",
+    prompt: "Launch a beauty campaign for skincare and cosmetics buyers",
+  },
+  {
+    name: "Frequent Shoppers",
+    description: "Customers with 5+ orders. Ideal for loyalty rewards and VIP-tier programs.",
+    icon: <ShoppingBag className="h-5 w-5" />,
+    color: "text-violet-500",
+    bg: "bg-violet-500/10",
+    border: "border-violet-500/20",
+    prompt: "Reward our most frequent shoppers with a loyalty bonus",
+  },
+];
 
 export const Route = createFileRoute("/audiences")({
   head: () => ({
@@ -47,6 +95,39 @@ function AudienceBuilder() {
     <div className="flex min-h-screen flex-col">
       <Topbar title="Audience Builder" description="Define a segment in plain English or with precise filters." />
       <main className="flex-1 space-y-6 p-4 md:p-6">
+
+        {/* Prebuilt Segments Panel */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold">Prebuilt Segments</h2>
+            <Badge variant="secondary" className="text-[10px]">Olist Dataset</Badge>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {PREBUILT_SEGMENTS.map((seg) => (
+              <Card
+                key={seg.name}
+                className={`border ${seg.border} transition hover:shadow-md`}
+              >
+                <CardContent className="p-4">
+                  <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${seg.bg} ${seg.color}`}>
+                    {seg.icon}
+                  </div>
+                  <p className="text-sm font-medium leading-tight">{seg.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground leading-snug">{seg.description}</p>
+                  <Link
+                    to="/copilot"
+                    search={{ q: seg.prompt } as never}
+                    className={`mt-3 flex w-full items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${seg.bg} ${seg.color} hover:opacity-80`}
+                  >
+                    Launch Campaign <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
         <Tabs defaultValue="nl" className="space-y-4">
           <TabsList>
             <TabsTrigger value="nl" className="gap-1.5"><Wand2 className="h-3.5 w-3.5" /> Natural Language</TabsTrigger>

@@ -125,10 +125,11 @@ export const analyticsCards = {
 };
 
 export const samplePrompts = [
-  "Win back customers who haven't purchased in 60 days",
-  "Create a campaign for premium coffee buyers",
-  "Find customers likely to churn this month",
-  "Re-engage Bangalore VIPs with a tasting invite",
+  "Win back customers who haven't ordered in 6 months",
+  "Target our highest-value VIP customers with an exclusive offer",
+  "Re-engage electronics buyers with a new product launch",
+  "Launch a beauty campaign for skincare and cosmetics buyers",
+  "Reward our most frequent shoppers with a loyalty bonus",
 ];
 
 export function formatINR(n: number) {

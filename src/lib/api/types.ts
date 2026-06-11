@@ -4,6 +4,7 @@
 
 export type Channel = "email" | "whatsapp" | "sms" | "push";
 export type CampaignStatus = "draft" | "scheduled" | "active" | "paused" | "completed";
+export type ChurnRisk = "low" | "medium" | "high";
 export type CommunicationStatus =
   | "pending"
   | "sent"
@@ -21,7 +22,15 @@ export interface Customer {
   email: string;
   phone: string;
   city: string;
+  state: string;
   preferred_channel: Channel;
+  // RFM intelligence — all monetary values in INR
+  clv: string;             // Decimal as string from DRF
+  rfm_score: number;       // 1–5 composite RFM score
+  rfm_recency: number;     // days since last order
+  rfm_frequency: number;   // total orders
+  rfm_monetary: string;    // avg order value in INR (Decimal string)
+  churn_risk: ChurnRisk;
   created_at: string;
   updated_at: string;
 }
@@ -30,9 +39,11 @@ export interface Order {
   id: number;
   customer: number;
   customer_name: string;
-  amount: string;
+  amount: string;            // INR (primary application field)
+  source_amount_brl: string | null;  // Original BRL amount (Olist only)
   category: string;
   order_date: string;
+  review_score: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +53,7 @@ export interface Segment {
   name: string;
   description: string;
   criteria: Record<string, unknown>;
+  is_prebuilt: boolean;
   customers: number[];
   customer_count: number;
   created_at: string;
@@ -95,11 +107,13 @@ export interface AudienceBuilderRequest {
 }
 
 export interface AudienceFilters {
-  min_total_spend?: number;
+  min_total_spend?: number;    // INR threshold
   inactive_days?: number;
   cities?: string[];
   categories?: string[];
   preferred_channels?: string[];
+  min_rfm_score?: number;      // 1–5
+  churn_risk?: ChurnRisk;
 }
 
 export interface AudienceBuilderResponse {
@@ -115,12 +129,19 @@ export interface CampaignCopilotRequest {
 
 export interface AudienceSummary {
   name: string;
+  prebuilt_segment: string | null;   // Name of matched prebuilt segment, if any
   criteria: Record<string, unknown>;
   audience_size: number;
-  avg_spend: number;
+  avg_spend: number;             // INR
   avg_orders: number;
   top_city: string | null;
   channel_mix: { channel: string; customers: number }[];
+  // RFM intelligence — all INR
+  avg_clv_inr: number | null;
+  avg_recency_days: number | null;
+  avg_frequency: number | null;
+  avg_rfm_score: number | null;
+  churn_risk_pct: number | null; // % of audience with churn_risk=high
 }
 
 export interface ExpectedOutcome {
@@ -140,12 +161,24 @@ export interface CampaignCopilotResponse {
 }
 
 // --- Dashboard stats ---
+export interface SegmentSummary {
+  id: number;
+  name: string;
+  customer_count: number;
+}
+
 export interface DashboardStats {
   total_customers: number;
   total_orders: number;
   active_campaigns: number;
-  revenue_influenced: number;
+  revenue_influenced: number;     // INR
+  revenue_influenced_inr: number; // INR (explicit key)
   recent_campaigns: Campaign[];
+  prebuilt_segments: SegmentSummary[];
+  rfm_summary: {
+    avg_clv_inr: number;
+    avg_rfm_score: number;
+  };
 }
 
 // --- API error shape ---

@@ -22,6 +22,7 @@ from apps.crm.serializers import (
     CustomerSerializer,
     OrderSerializer,
     SegmentSerializer,
+    SegmentSummarySerializer,
     AudienceBuilderRequestSerializer,
     AudienceBuilderResponseSerializer,
     CampaignCopilotRequestSerializer,
@@ -54,7 +55,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "email", "city"]
-    ordering_fields = ["name", "city", "preferred_channel", "created_at"]
+    ordering_fields = [
+        "name", "city", "preferred_channel", "created_at",
+        "clv", "rfm_score", "rfm_recency", "churn_risk",
+    ]
     ordering = ["name"]
 
     @action(detail=True, methods=["get"], url_path="orders")
@@ -90,8 +94,23 @@ class SegmentViewSet(viewsets.ModelViewSet):
     serializer_class = SegmentSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "description"]
-    ordering_fields = ["name", "created_at"]
+    ordering_fields = ["name", "created_at", "is_prebuilt"]
     ordering = ["name"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Allow ?is_prebuilt=true filter
+        is_prebuilt = self.request.query_params.get("is_prebuilt")
+        if is_prebuilt is not None:
+            qs = qs.filter(is_prebuilt=is_prebuilt.lower() in ("true", "1", "yes"))
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="prebuilt")
+    def prebuilt(self, request):
+        """List the 5 Olist-derived prebuilt segments with their customer counts."""
+        segments = Segment.objects.filter(is_prebuilt=True).prefetch_related("customers").order_by("name")
+        serializer = SegmentSummarySerializer(segments, many=True)
+        return Response(serializer.data)
 
 
 class CampaignViewSet(viewsets.ModelViewSet):
@@ -174,6 +193,7 @@ class DashboardStatsView(APIView):
         total_orders = Order.objects.count()
         active_campaigns = Campaign.objects.filter(status=CampaignStatus.ACTIVE).count()
 
+        # Revenue influenced — all in INR (Order.amount is always INR)
         revenue_influenced = (
             Order.objects.filter(
                 customer__communications__isnull=False
@@ -188,13 +208,41 @@ class DashboardStatsView(APIView):
 
         recent_campaigns = Campaign.objects.select_related("segment").order_by("-created_at")[:5]
 
+        # RFM segment summaries (prebuilt segments only)
+        prebuilt_segments = (
+            Segment.objects.filter(is_prebuilt=True)
+            .prefetch_related("customers")
+            .order_by("name")
+        )
+        segment_summaries = [
+            {
+                "id": seg.id,
+                "name": seg.name,
+                "customer_count": seg.customers.count(),
+            }
+            for seg in prebuilt_segments
+        ]
+
+        # Top RFM insights (INR-based CLV)
+        rfm_summary = Customer.objects.aggregate(
+            avg_clv_inr=Avg("clv"),
+            avg_rfm_score=Avg("rfm_score"),
+        )
+
         return Response(
             {
                 "total_customers": total_customers,
                 "total_orders": total_orders,
                 "active_campaigns": active_campaigns,
+                "revenue_influenced_inr": float(revenue_influenced or 0),
+                # Legacy key for backwards compat
                 "revenue_influenced": float(revenue_influenced or 0),
                 "recent_campaigns": CampaignSerializer(recent_campaigns, many=True).data,
+                "prebuilt_segments": segment_summaries,
+                "rfm_summary": {
+                    "avg_clv_inr": round(float(rfm_summary.get("avg_clv_inr") or 0), 2),
+                    "avg_rfm_score": round(float(rfm_summary.get("avg_rfm_score") or 0), 1),
+                },
             }
         )
 
@@ -276,6 +324,7 @@ class CampaignCopilotView(APIView):
 
         response_serializer = CampaignCopilotResponseSerializer(
             {
+                "campaign_id": draft.campaign_id,
                 "audience_summary": draft.audience_summary,
                 "reasoning": draft.reasoning,
                 "recommended_channel": draft.recommended_channel,

@@ -9,15 +9,16 @@ from django.db.models import Count, DecimalField, Max, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from apps.crm.models import Channel, Customer
+from apps.crm.models import Channel, ChurnRisk, Customer
 from apps.crm.prompts.audience_builder import (
     AUDIENCE_BUILDER_SYSTEM_PROMPT,
     build_audience_builder_user_prompt,
 )
 
 
-ALLOWED_CATEGORIES = {"Coffee", "Beauty", "Fashion", "Electronics"}
+ALLOWED_CATEGORIES = {"Coffee", "Beauty", "Fashion", "Electronics", "General"}
 ALLOWED_CHANNELS = {choice.value for choice in Channel}
+ALLOWED_CHURN_RISKS = {choice.value for choice in ChurnRisk}
 
 
 class AudienceBuilderError(Exception):
@@ -49,6 +50,7 @@ class AudienceBuilderService:
         "type": "object",
         "additionalProperties": False,
         "properties": {
+            # All monetary thresholds are in INR
             "min_total_spend": {"type": "number", "minimum": 0},
             "inactive_days": {"type": "integer", "minimum": 1},
             "cities": {
@@ -62,6 +64,12 @@ class AudienceBuilderService:
             "preferred_channels": {
                 "type": "array",
                 "items": {"type": "string", "enum": sorted(ALLOWED_CHANNELS)},
+            },
+            # RFM filters (from Customer.rfm_score and Customer.churn_risk)
+            "min_rfm_score": {"type": "integer", "minimum": 1, "maximum": 5},
+            "churn_risk": {
+                "type": "string",
+                "enum": sorted(ALLOWED_CHURN_RISKS),
             },
         },
         "required": [],
@@ -122,6 +130,8 @@ class AudienceBuilderService:
             "cities",
             "categories",
             "preferred_channels",
+            "min_rfm_score",
+            "churn_risk",
         }
         unknown_fields = set(filters) - allowed_fields
         if unknown_fields:
@@ -170,6 +180,23 @@ class AudienceBuilderService:
                 )
             validated["preferred_channels"] = channels
 
+        if "min_rfm_score" in filters:
+            try:
+                min_rfm = int(filters["min_rfm_score"])
+            except (TypeError, ValueError) as exc:
+                raise AudienceFilterValidationError("min_rfm_score must be an integer.") from exc
+            if not 1 <= min_rfm <= 5:
+                raise AudienceFilterValidationError("min_rfm_score must be between 1 and 5.")
+            validated["min_rfm_score"] = min_rfm
+
+        if "churn_risk" in filters:
+            churn_risk = str(filters["churn_risk"]).lower().strip()
+            if churn_risk not in ALLOWED_CHURN_RISKS:
+                raise AudienceFilterValidationError(
+                    f"churn_risk must be one of: {', '.join(sorted(ALLOWED_CHURN_RISKS))}."
+                )
+            validated["churn_risk"] = churn_risk
+
         if not validated:
             raise AudienceFilterValidationError("At least one valid audience filter is required.")
 
@@ -200,6 +227,12 @@ class AudienceBuilderService:
 
         if filters.get("categories"):
             queryset = queryset.filter(orders__category__in=filters["categories"]).distinct()
+
+        if "min_rfm_score" in filters:
+            queryset = queryset.filter(rfm_score__gte=filters["min_rfm_score"])
+
+        if "churn_risk" in filters:
+            queryset = queryset.filter(churn_risk=filters["churn_risk"])
 
         matched_customers = list(queryset.values("id", "total_spend"))
         audience_size = len(matched_customers)

@@ -19,11 +19,23 @@ class CustomerSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "city",
+            "state",
             "preferred_channel",
+            # RFM intelligence — all monetary values in INR
+            "clv",
+            "rfm_score",
+            "rfm_recency",
+            "rfm_frequency",
+            "rfm_monetary",
+            "churn_risk",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = [
+            "id", "clv", "rfm_score", "rfm_recency",
+            "rfm_frequency", "rfm_monetary", "churn_risk",
+            "created_at", "updated_at",
+        ]
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -35,13 +47,41 @@ class OrderSerializer(serializers.ModelSerializer):
             "id",
             "customer",
             "customer_name",
+            # Primary amount field — always in INR
             "amount",
+            # BRL source (Olist data only; null for synthetic orders)
+            "source_amount_brl",
             "category",
             "order_date",
+            "review_score",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "customer_name", "created_at", "updated_at"]
+        read_only_fields = [
+            "id", "customer_name", "source_amount_brl",
+            "review_score", "created_at", "updated_at",
+        ]
+
+
+class SegmentSummarySerializer(serializers.ModelSerializer):
+    """Lightweight serializer for listing prebuilt segments (no customer list)."""
+    customer_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Segment
+        fields = [
+            "id",
+            "name",
+            "description",
+            "criteria",
+            "is_prebuilt",
+            "customer_count",
+            "created_at",
+        ]
+        read_only_fields = ["id", "customer_count", "is_prebuilt", "created_at"]
+
+    def get_customer_count(self, obj: Segment) -> int:
+        return obj.customers.count()
 
 
 class SegmentSerializer(serializers.ModelSerializer):
@@ -54,12 +94,13 @@ class SegmentSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "criteria",
+            "is_prebuilt",
             "customers",
             "customer_count",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "customer_count", "created_at", "updated_at"]
+        read_only_fields = ["id", "customer_count", "is_prebuilt", "created_at", "updated_at"]
 
     def get_customer_count(self, obj: Segment) -> int:
         return obj.customers.count()
@@ -77,6 +118,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             "channel",
             "status",
             "audience_size",
+            "message",
             "segment",
             "segment_name",
             "created_at",
@@ -142,6 +184,7 @@ class CampaignCopilotRequestSerializer(serializers.Serializer):
 
 
 class CampaignCopilotResponseSerializer(serializers.Serializer):
+    campaign_id = serializers.IntegerField(allow_null=True, required=False)
     audience_summary = serializers.DictField()
     reasoning = serializers.CharField()
     recommended_channel = serializers.CharField()

@@ -17,15 +17,62 @@ class Channel(models.TextChoices):
     PUSH = "push", "Push"
 
 
+class ChurnRisk(models.TextChoices):
+    LOW = "low", "Low"
+    MEDIUM = "medium", "Medium"
+    HIGH = "high", "High"
+
+
 class Customer(TimeStampedModel):
+    # ── Identity ──────────────────────────────────────────────────────────────
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=32, blank=True)
     city = models.CharField(max_length=120, blank=True)
+    state = models.CharField(max_length=120, blank=True)
     preferred_channel = models.CharField(
         max_length=20,
         choices=Channel.choices,
         default=Channel.EMAIL,
+    )
+
+    # ── Olist source tracing ───────────────────────────────────────────────────
+    olist_customer_id = models.CharField(max_length=64, blank=True, default="", db_index=True)
+
+    # ── RFM scores (computed by RFMEngine) ────────────────────────────────────
+    rfm_recency = models.PositiveIntegerField(
+        default=0,
+        help_text="Days since last order. Lower = more recent.",
+    )
+    rfm_frequency = models.PositiveIntegerField(
+        default=0,
+        help_text="Total number of orders placed.",
+    )
+    rfm_monetary = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        help_text="Average order value in INR.",
+    )
+    rfm_score = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Composite RFM quintile score 1-5 (5 = best).",
+    )
+
+    # ── Customer Lifetime Value ────────────────────────────────────────────────
+    clv = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        help_text="Customer Lifetime Value = total spend in INR.",
+    )
+
+    # ── Churn Risk ────────────────────────────────────────────────────────────
+    churn_risk = models.CharField(
+        max_length=10,
+        choices=ChurnRisk.choices,
+        default=ChurnRisk.LOW,
+        help_text="Churn risk computed from recency: >180d=high, 90-180d=medium, <90d=low.",
     )
 
     class Meta:
@@ -34,10 +81,19 @@ class Customer(TimeStampedModel):
             models.Index(fields=["name"], name="crm_customer_name_idx"),
             models.Index(fields=["city"], name="crm_customer_city_idx"),
             models.Index(fields=["preferred_channel"], name="crm_customer_channel_idx"),
+            models.Index(fields=["rfm_score"], name="crm_customer_rfm_idx"),
+            models.Index(fields=["churn_risk"], name="crm_customer_churn_idx"),
+            models.Index(fields=["clv"], name="crm_customer_clv_idx"),
         ]
 
     def __str__(self) -> str:
         return self.name
+
+
+# ── Currency conversion constant ───────────────────────────────────────────────
+# Rate sourced at project creation (2024). Fixed for reproducibility.
+# All stored monetary values are in INR.
+BRL_TO_INR_RATE = 15
 
 
 class Order(TimeStampedModel):
@@ -46,9 +102,40 @@ class Order(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="orders",
     )
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    # ── Amount (INR — primary application field) ───────────────────────────────
+    amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        help_text="Order amount in INR (= source_amount_brl × BRL_TO_INR_RATE for Olist data).",
+    )
+
+    # ── BRL source (preserved for Olist traceability, null for synthetic data) ─
+    source_amount_brl = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Original amount in BRL from Olist dataset. NULL for non-Olist orders.",
+    )
+
     category = models.CharField(max_length=120)
     order_date = models.DateTimeField(default=timezone.now)
+
+    # ── Olist source tracing ───────────────────────────────────────────────────
+    olist_order_id = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    payment_value = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Total payment captured from Olist payments CSV, stored in INR.",
+    )
+    review_score = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Customer review score 1–5 from Olist reviews CSV.",
+    )
 
     class Meta:
         ordering = ["-order_date"]
@@ -56,16 +143,21 @@ class Order(TimeStampedModel):
             models.Index(fields=["customer", "-order_date"], name="crm_order_customer_date_idx"),
             models.Index(fields=["category"], name="crm_order_category_idx"),
             models.Index(fields=["order_date"], name="crm_order_date_idx"),
+            models.Index(fields=["olist_order_id"], name="crm_order_olist_idx"),
         ]
 
     def __str__(self) -> str:
-        return f"{self.customer.name} - {self.category} - {self.amount}"
+        return f"{self.customer.name} - {self.category} - ₹{self.amount}"
 
 
 class Segment(TimeStampedModel):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     criteria = models.JSONField(default=dict, blank=True)
+    is_prebuilt = models.BooleanField(
+        default=False,
+        help_text="True for the 5 Olist-derived prebuilt segments.",
+    )
     customers = models.ManyToManyField(
         Customer,
         related_name="segments",
@@ -76,6 +168,7 @@ class Segment(TimeStampedModel):
         ordering = ["name"]
         indexes = [
             models.Index(fields=["name"], name="crm_segment_name_idx"),
+            models.Index(fields=["is_prebuilt"], name="crm_segment_prebuilt_idx"),
         ]
 
     def __str__(self) -> str:
@@ -111,6 +204,7 @@ class Campaign(TimeStampedModel):
         null=True,
         blank=True,
     )
+    message = models.TextField(blank=True, default="")
 
     class Meta:
         ordering = ["-created_at"]

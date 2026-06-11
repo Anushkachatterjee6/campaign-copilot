@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Sparkles, Send, Users2, MessageSquare, Rocket, ArrowUp, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
+import { Sparkles, Send, Users2, MessageSquare, Rocket, ArrowUp, TrendingUp, AlertCircle, Loader2, ShieldAlert, Trophy, Cpu, Flower2, ShoppingBag, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Topbar } from "@/components/topbar";
@@ -22,6 +22,34 @@ export const Route = createFileRoute("/copilot")({
   }),
   component: Copilot,
 });
+
+const SEGMENT_PROMPTS: { icon: React.ReactNode; label: string; prompt: string }[] = [
+  {
+    icon: <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />,
+    label: "Churn Risk",
+    prompt: "Win back customers who haven't ordered in 6 months",
+  },
+  {
+    icon: <Trophy className="h-3.5 w-3.5 text-amber-500" />,
+    label: "High Value",
+    prompt: "Target our highest-value VIP customers with an exclusive offer",
+  },
+  {
+    icon: <Cpu className="h-3.5 w-3.5 text-blue-500" />,
+    label: "Electronics Buyers",
+    prompt: "Re-engage electronics buyers with a new product launch",
+  },
+  {
+    icon: <Flower2 className="h-3.5 w-3.5 text-pink-500" />,
+    label: "Beauty Buyers",
+    prompt: "Launch a beauty campaign for skincare and cosmetics buyers",
+  },
+  {
+    icon: <ShoppingBag className="h-3.5 w-3.5 text-violet-500" />,
+    label: "Frequent Shoppers",
+    prompt: "Reward our most frequent shoppers with a loyalty bonus",
+  },
+];
 
 function Copilot() {
   const [input, setInput] = useState("");
@@ -64,15 +92,18 @@ function Copilot() {
                   <p className="max-w-md text-sm text-muted-foreground">
                     Ask in plain English. I'll find the audience, pick the right channel and draft the message.
                   </p>
-                  <div className="mt-2 grid w-full max-w-xl gap-2 sm:grid-cols-2">
-                    {samplePrompts.map((p) => (
+                  <div className="mt-2 grid w-full max-w-xl gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {SEGMENT_PROMPTS.map((s) => (
                       <button
-                        key={p}
-                        onClick={() => ask(p)}
+                        key={s.label}
+                        onClick={() => ask(s.prompt)}
                         className="rounded-lg border bg-card p-3 text-left text-sm text-foreground transition hover:border-primary/40 hover:bg-accent"
                       >
-                        <MessageSquare className="mb-1.5 h-3.5 w-3.5 text-primary" />
-                        {p}
+                        <div className="mb-1.5 flex items-center gap-1.5">
+                          {s.icon}
+                          <span className="text-[11px] font-medium text-muted-foreground">{s.label}</span>
+                        </div>
+                        {s.prompt}
                       </button>
                     ))}
                   </div>
@@ -128,6 +159,12 @@ function Copilot() {
                           <div className="flex items-center gap-2">
                             <Users2 className="h-4 w-4 text-primary" />
                             <CardTitle className="text-sm">Selected audience</CardTitle>
+                            {result.audience_summary.prebuilt_segment && (
+                              <Badge variant="secondary" className="ml-auto text-[10px]">
+                                <Zap className="mr-1 h-2.5 w-2.5" />
+                                {result.audience_summary.prebuilt_segment}
+                              </Badge>
+                            )}
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-2">
@@ -150,6 +187,24 @@ function Copilot() {
                               <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-primary" />
                               Avg orders: {result.audience_summary.avg_orders}
                             </li>
+                            {result.audience_summary.avg_clv_inr != null && result.audience_summary.avg_clv_inr > 0 && (
+                              <li className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                                Avg CLV: {formatINR(result.audience_summary.avg_clv_inr)}
+                              </li>
+                            )}
+                            {result.audience_summary.avg_rfm_score != null && result.audience_summary.avg_rfm_score > 0 && (
+                              <li className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-violet-500" />
+                                RFM score: {result.audience_summary.avg_rfm_score}/5
+                              </li>
+                            )}
+                            {result.audience_summary.churn_risk_pct != null && result.audience_summary.churn_risk_pct > 0 && (
+                              <li className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-rose-500" />
+                                Churn risk: {result.audience_summary.churn_risk_pct}% high-risk
+                              </li>
+                            )}
                           </ul>
                         </CardContent>
                       </Card>
@@ -267,17 +322,19 @@ function Copilot() {
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Try a prompt</CardTitle>
+                <CardTitle className="text-sm">Prebuilt segments</CardTitle>
+                <CardDescription className="text-xs">Click to instantly launch a campaign</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                {samplePrompts.map((p) => (
+                {SEGMENT_PROMPTS.map((s) => (
                   <button
-                    key={p}
-                    onClick={() => ask(p)}
+                    key={s.label}
+                    onClick={() => ask(s.prompt)}
                     disabled={thinking}
-                    className="w-full rounded-md border bg-card p-2 text-left text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+                    className="flex w-full items-center gap-2 rounded-md border bg-card px-3 py-2 text-left text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:opacity-50"
                   >
-                    {p}
+                    {s.icon}
+                    <span className="flex-1">{s.label}</span>
                   </button>
                 ))}
               </CardContent>
