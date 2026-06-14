@@ -29,6 +29,7 @@ jobs:
             exit 1
           fi
           SPACE="${HF_SPACE:-${HF_SPACE_NAME:-campaign-copilot-api}}"
+          SPACE="${SPACE##*/}"
           echo "HF_SPACE=$SPACE" >> "$GITHUB_ENV"
           echo "Target Space: ${SPACE}"
 
@@ -72,13 +73,16 @@ jobs:
 
           python <<'PY'
           import os
+          import subprocess
           import sys
 
           from huggingface_hub import HfApi
           from huggingface_hub.utils import HfHubHTTPError
 
-          token = os.environ["HF_TOKEN"]
-          space = os.environ.get("HF_SPACE", "campaign-copilot-api")
+          token = os.environ["HF_TOKEN"].strip()
+          space = os.environ.get("HF_SPACE", "campaign-copilot-api").strip()
+          if "/" in space:
+              space = space.split("/")[-1]
           sha = os.environ.get("GITHUB_SHA", "")[:7]
 
           api = HfApi(token=token)
@@ -96,21 +100,45 @@ jobs:
 
           repo_id = f"{username}/{space}"
           print(f"Token owner: {username}")
-          print(f"Uploading bundle to spaces/{repo_id} ...")
+          print(f"Target repo: spaces/{repo_id}")
 
-          try:
+          def upload_via_api() -> None:
+              print("Uploading via huggingface_hub API ...")
               api.upload_folder(
                   folder_path="hf_deploy",
+                  path_in_repo=".",
                   repo_id=repo_id,
                   repo_type="space",
                   commit_message=f"Deploy {sha}" if sha else "Deploy from GitHub Actions",
               )
+
+          def upload_via_git() -> None:
+              print("Uploading via git push fallback ...")
+              clone_url = f"https://user:{token}@huggingface.co/spaces/{repo_id}"
+              subprocess.run(["git", "clone", "--depth", "1", clone_url, "hf_repo"], check=True)
+              subprocess.run(
+                  "find hf_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +",
+                  shell=True,
+                  check=True,
+              )
+              subprocess.run(["cp", "-a", "hf_deploy/.", "hf_repo/"], check=True)
+              subprocess.run(["git", "-C", "hf_repo", "config", "user.email", "github-actions@github.com"], check=True)
+              subprocess.run(["git", "-C", "hf_repo", "config", "user.name", "GitHub Actions"], check=True)
+              subprocess.run(["git", "-C", "hf_repo", "add", "--all"], check=True)
+              diff = subprocess.run(["git", "-C", "hf_repo", "diff", "--staged", "--quiet"])
+              if diff.returncode != 0:
+                  msg = f"Deploy {sha}" if sha else "Deploy from GitHub Actions"
+                  subprocess.run(["git", "-C", "hf_repo", "commit", "-m", msg], check=True)
+              subprocess.run(["git", "-C", "hf_repo", "push", "origin", "HEAD:main"], check=True)
+
+          try:
+              upload_via_api()
           except HfHubHTTPError as exc:
-              print(f"::error::Upload failed ({exc.response.status_code}): {exc}")
-              sys.exit(1)
+              print(f"API upload failed ({exc.response.status_code}): {exc}")
+              upload_via_git()
           except Exception as exc:
-              print(f"::error::Upload failed: {type(exc).__name__}: {exc}")
-              sys.exit(1)
+              print(f"API upload failed: {type(exc).__name__}: {exc}")
+              upload_via_git()
 
           api_url = f"https://{username}-{space}.hf.space"
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
