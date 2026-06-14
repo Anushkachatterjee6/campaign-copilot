@@ -3,7 +3,6 @@
 // ---------------------------------------------------------------------------
 
 import { api } from "./client";
-import { unwrapList } from "./unwrap";
 import type {
   AudienceBuilderRequest,
   AudienceBuilderResponse,
@@ -13,7 +12,6 @@ import type {
   Communication,
   Customer,
   DashboardStats,
-  AnalyticsCharts,
   Order,
   PaginatedList,
   Segment,
@@ -23,16 +21,13 @@ import type {
 // Dashboard & Analytics
 // ---------------------------------------------------------------------------
 export const fetchDashboardStats = () => api.get<DashboardStats>("/stats/");
-export const fetchAnalyticsCharts = () => api.get<AnalyticsCharts>("/analytics/charts/");
+export const fetchAnalyticsCharts = () => api.get<any>("/analytics/charts/");
 
 // ---------------------------------------------------------------------------
 // Customers
 // ---------------------------------------------------------------------------
-export const fetchCustomers = async (params?: {
-  search?: string;
-  ordering?: string;
-  page?: number;
-}) => unwrapList(await api.get<Customer[] | PaginatedList<Customer>>("/customers/", params));
+export const fetchCustomers = (params?: { search?: string; ordering?: string; page?: number }) =>
+  api.get<Customer[]>("/customers/", params);
 
 export const fetchCustomer = (id: number) => api.get<Customer>(`/customers/${id}/`);
 
@@ -52,29 +47,24 @@ export const fetchCustomerCommunications = (id: number) =>
 // ---------------------------------------------------------------------------
 // Orders
 // ---------------------------------------------------------------------------
-export const fetchOrders = async (params?: { search?: string; ordering?: string; page?: number }) =>
-  unwrapList(await api.get<Order[] | PaginatedList<Order>>("/orders/", params));
+export const fetchOrders = (params?: { search?: string; ordering?: string; page?: number }) =>
+  api.get<Order[]>("/orders/", params);
 
 export const fetchOrder = (id: number) => api.get<Order>(`/orders/${id}/`);
 
-export const createOrder = (
-  data: Omit<Order, "id" | "customer_name" | "created_at" | "updated_at">,
-) => api.post<Order>("/orders/", data);
+export const createOrder = (data: Omit<Order, "id" | "customer_name" | "created_at" | "updated_at">) =>
+  api.post<Order>("/orders/", data);
 
 // ---------------------------------------------------------------------------
 // Segments
 // ---------------------------------------------------------------------------
-export const fetchSegments = async (params?: {
-  search?: string;
-  ordering?: string;
-  page?: number;
-}) => unwrapList(await api.get<Segment[] | PaginatedList<Segment>>("/segments/", params));
+export const fetchSegments = (params?: { search?: string; ordering?: string; page?: number }) =>
+  api.get<Segment[]>("/segments/", params);
 
 export const fetchSegment = (id: number) => api.get<Segment>(`/segments/${id}/`);
 
-export const createSegment = (
-  data: Omit<Segment, "id" | "customer_count" | "created_at" | "updated_at">,
-) => api.post<Segment>("/segments/", data);
+export const createSegment = (data: Omit<Segment, "id" | "customer_count" | "created_at" | "updated_at">) =>
+  api.post<Segment>("/segments/", data);
 
 export const updateSegment = (id: number, data: Partial<Segment>) =>
   api.patch<Segment>(`/segments/${id}/`, data);
@@ -84,18 +74,17 @@ export const deleteSegment = (id: number) => api.delete(`/segments/${id}/`);
 // ---------------------------------------------------------------------------
 // Campaigns
 // ---------------------------------------------------------------------------
-export const fetchCampaigns = async (params?: {
+export const fetchCampaigns = (params?: {
   search?: string;
   ordering?: string;
   page?: number;
   status?: string;
-}) => unwrapList(await api.get<Campaign[] | PaginatedList<Campaign>>("/campaigns/", params));
+}) => api.get<Campaign[]>("/campaigns/", params);
 
 export const fetchCampaign = (id: number) => api.get<Campaign>(`/campaigns/${id}/`);
 
-export const createCampaign = (
-  data: Omit<Campaign, "id" | "segment_name" | "created_at" | "updated_at">,
-) => api.post<Campaign>("/campaigns/", data);
+export const createCampaign = (data: Omit<Campaign, "id" | "segment_name" | "created_at" | "updated_at">) =>
+  api.post<Campaign>("/campaigns/", data);
 
 export const updateCampaign = (id: number, data: Partial<Campaign>) =>
   api.patch<Campaign>(`/campaigns/${id}/`, data);
@@ -115,11 +104,8 @@ export const fetchCampaignStats = (id: number) =>
 // ---------------------------------------------------------------------------
 // Communications
 // ---------------------------------------------------------------------------
-export const fetchCommunications = (params?: {
-  search?: string;
-  ordering?: string;
-  page?: number;
-}) => api.get<PaginatedList<Communication>>("/communications/", params);
+export const fetchCommunications = (params?: { search?: string; ordering?: string; page?: number }) =>
+  api.get<PaginatedList<Communication>>("/communications/", params);
 
 export const fetchCommunication = (id: number) => api.get<Communication>(`/communications/${id}/`);
 

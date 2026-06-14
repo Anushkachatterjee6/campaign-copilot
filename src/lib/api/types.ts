@@ -14,15 +14,7 @@ export type CommunicationStatus =
   | "clicked"
   | "converted"
   | "failed";
-export type EventType =
-  | "queued"
-  | "sent"
-  | "delivered"
-  | "opened"
-  | "read"
-  | "clicked"
-  | "converted"
-  | "failed";
+export type EventType = "queued" | "sent" | "delivered" | "opened" | "read" | "clicked" | "converted" | "failed";
 
 export interface Customer {
   id: number;
@@ -33,14 +25,14 @@ export interface Customer {
   state: string;
   preferred_channel: Channel;
   // RFM intelligence — all monetary values in INR
-  clv: string; // Decimal as string from DRF
-  rfm_score: number; // 1–5 composite RFM score
-  rfm_recency: number; // days since last order
-  rfm_frequency: number; // total orders
-  rfm_monetary: string; // avg order value in INR (Decimal string)
+  clv: string;             // Decimal as string from DRF
+  rfm_score: number;       // 1–5 composite RFM score
+  rfm_recency: number;     // days since last order
+  rfm_frequency: number;   // total orders
+  rfm_monetary: string;    // avg order value in INR (Decimal string)
   churn_risk: ChurnRisk;
   // Health score derived fields
-  health_score: number; // 0–100
+  health_score: number;          // 0–100
   health_score_label: "Healthy" | "At Risk" | "High Churn Risk";
   created_at: string;
   updated_at: string;
@@ -50,8 +42,8 @@ export interface Order {
   id: number;
   customer: number;
   customer_name: string;
-  amount: string; // INR (primary application field)
-  source_amount_brl: string | null; // Original BRL amount (Olist only)
+  amount: string;            // INR (primary application field)
+  source_amount_brl: string | null;  // Original BRL amount (Olist only)
   category: string;
   order_date: string;
   review_score: number | null;
@@ -80,8 +72,6 @@ export interface Campaign {
   audience_size: number;
   segment: number | null;
   segment_name: string | null;
-  message: string;
-  expected_outcome: ExpectedOutcome | null;
   created_at: string;
   updated_at: string;
 }
@@ -120,12 +110,12 @@ export interface AudienceBuilderRequest {
 }
 
 export interface AudienceFilters {
-  min_total_spend?: number; // INR threshold
+  min_total_spend?: number;    // INR threshold
   inactive_days?: number;
   cities?: string[];
   categories?: string[];
   preferred_channels?: string[];
-  min_rfm_score?: number; // 1–5
+  min_rfm_score?: number;      // 1–5
   churn_risk?: ChurnRisk;
 }
 
@@ -142,10 +132,10 @@ export interface CampaignCopilotRequest {
 
 export interface AudienceSummary {
   name: string;
-  prebuilt_segment: string | null; // Name of matched prebuilt segment, if any
+  prebuilt_segment: string | null;   // Name of matched prebuilt segment, if any
   criteria: Record<string, unknown>;
   audience_size: number;
-  avg_spend: number; // INR
+  avg_spend: number;             // INR
   avg_orders: number;
   top_city: string | null;
   channel_mix: { channel: string; customers: number }[];
@@ -166,7 +156,6 @@ export interface ExpectedOutcome {
 }
 
 export interface CampaignCopilotResponse {
-  campaign_id: number | null;
   audience_summary: AudienceSummary;
   reasoning: string;
   recommended_channel: string;
@@ -181,27 +170,11 @@ export interface SegmentSummary {
   customer_count: number;
 }
 
-export interface AnalyticsCharts {
-  funnel: { stage: string; value: number }[];
-  channel_performance: { channel: string; engagement: number; conversion: number }[];
-  customer_activity: { month: string; active: number; new: number }[];
-  revenue_trend: { month: string; revenue: number }[];
-  revenue_attribution: { channel: string; revenue: number }[];
-  engagement_trend: {
-    date: string;
-    whatsapp: number;
-    email: number;
-    sms: number;
-    push: number;
-  }[];
-  campaign_trend: { date: string; sent: number; opened: number; converted: number }[];
-}
-
 export interface DashboardStats {
   total_customers: number;
   total_orders: number;
   active_campaigns: number;
-  revenue_influenced: number; // INR
+  revenue_influenced: number;     // INR
   revenue_influenced_inr: number; // INR (explicit key)
   recent_campaigns: Campaign[];
   prebuilt_segments: SegmentSummary[];

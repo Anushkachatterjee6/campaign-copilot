@@ -14,7 +14,7 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
 
 # Accept localhost for dev + any onrender.com host + any hf.space host + any explicitly listed host
 _extra_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "")
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver", ".onrender.com", ".hf.space"] + (
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com", ".hf.space"] + (
     [h.strip() for h in _extra_hosts.split(",") if h.strip()]
 )
 

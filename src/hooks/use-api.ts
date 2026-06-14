@@ -10,7 +10,6 @@ import {
   createCustomer,
   deleteCampaign,
   deleteCustomer,
-  fetchAnalyticsCharts,
   fetchCampaign,
   fetchCampaignCommunications,
   fetchCampaignStats,
@@ -64,7 +63,10 @@ export function useDashboardStats() {
 export function useAnalyticsCharts() {
   return useQuery({
     queryKey: ["analytics-charts"],
-    queryFn: fetchAnalyticsCharts,
+    queryFn: () => {
+      // Must import the function we just added to endpoints.ts dynamically if not exported above
+      return import("@/lib/api/endpoints").then(m => m.fetchAnalyticsCharts());
+    },
     staleTime: 60_000,
   });
 }
@@ -145,12 +147,7 @@ export function useDeleteCustomer() {
 // ---------------------------------------------------------------------------
 // Campaigns
 // ---------------------------------------------------------------------------
-export function useCampaigns(params?: {
-  search?: string;
-  ordering?: string;
-  page?: number;
-  status?: string;
-}) {
+export function useCampaigns(params?: { search?: string; ordering?: string; page?: number; status?: string }) {
   return useQuery({
     queryKey: queryKeys.campaigns(params),
     queryFn: () => fetchCampaigns(params),
@@ -191,7 +188,6 @@ export function useCreateCampaign() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["campaigns"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
-      qc.invalidateQueries({ queryKey: ["analytics-charts"] });
       toast.success("Campaign created");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -218,7 +214,6 @@ export function useDeleteCampaign() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["campaigns"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
-      qc.invalidateQueries({ queryKey: ["analytics-charts"] });
       toast.success("Campaign deleted");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -233,7 +228,6 @@ export function useLaunchCampaign() {
       qc.invalidateQueries({ queryKey: queryKeys.campaign(data.id) });
       qc.invalidateQueries({ queryKey: ["campaigns"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
-      qc.invalidateQueries({ queryKey: ["analytics-charts"] });
       toast.success(`"${data.name}" is now live!`);
     },
     onError: (err: Error) => toast.error(err.message),

@@ -1,22 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  Sparkles,
-  Send,
-  Users2,
-  MessageSquare,
-  Rocket,
-  ArrowUp,
-  TrendingUp,
-  AlertCircle,
-  Loader2,
-  ShieldAlert,
-  Trophy,
-  Cpu,
-  Flower2,
-  ShoppingBag,
-  Zap,
-} from "lucide-react";
+import { Sparkles, Send, Users2, MessageSquare, Rocket, ArrowUp, TrendingUp, AlertCircle, Loader2, ShieldAlert, Trophy, Cpu, Flower2, ShoppingBag, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Topbar } from "@/components/topbar";
@@ -33,10 +17,7 @@ export const Route = createFileRoute("/copilot")({
   head: () => ({
     meta: [
       { title: "AI Copilot — Campaign Copilot" },
-      {
-        name: "description",
-        content: "Chat with the AI Copilot to generate campaigns end-to-end.",
-      },
+      { name: "description", content: "Chat with the AI Copilot to generate campaigns end-to-end." },
     ],
   }),
   component: Copilot,
@@ -89,8 +70,7 @@ function Copilot() {
   const hasResult = !!result;
 
   const channelDisplay = result?.recommended_channel
-    ? ((result.recommended_channel.charAt(0).toUpperCase() +
-        result.recommended_channel.slice(1)) as "Email" | "WhatsApp" | "SMS" | "Push")
+    ? (result.recommended_channel.charAt(0).toUpperCase() + result.recommended_channel.slice(1)) as "Email" | "WhatsApp" | "SMS" | "Push"
     : null;
 
   return (
@@ -112,8 +92,7 @@ function Copilot() {
                   </div>
                   <h2 className="text-lg font-semibold">What campaign should we launch today?</h2>
                   <p className="max-w-md text-sm text-muted-foreground">
-                    Ask in plain English. I'll find the audience, pick the right channel and draft
-                    the message.
+                    Ask in plain English. I'll find the audience, pick the right channel and draft the message.
                   </p>
                   <div className="mt-2 grid w-full max-w-xl gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {SEGMENT_PROMPTS.map((s) => (
@@ -124,9 +103,7 @@ function Copilot() {
                       >
                         <div className="mb-1.5 flex items-center gap-1.5">
                           {s.icon}
-                          <span className="text-[11px] font-medium text-muted-foreground">
-                            {s.label}
-                          </span>
+                          <span className="text-[11px] font-medium text-muted-foreground">{s.label}</span>
                         </div>
                         {s.prompt}
                       </button>
@@ -173,9 +150,7 @@ function Copilot() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          {result.reasoning}
-                        </p>
+                        <p className="text-sm leading-relaxed text-muted-foreground">{result.reasoning}</p>
                       </CardContent>
                     </Card>
 
@@ -197,9 +172,7 @@ function Copilot() {
                         <CardContent className="space-y-2">
                           <div className="flex items-baseline justify-between">
                             <p className="text-sm font-medium">{result.audience_summary.name}</p>
-                            <p className="text-lg font-semibold tabular-nums">
-                              {formatNum(result.audience_summary.audience_size)}
-                            </p>
+                            <p className="text-lg font-semibold tabular-nums">{formatNum(result.audience_summary.audience_size)}</p>
                           </div>
                           <ul className="space-y-1">
                             {result.audience_summary.top_city && (
@@ -216,27 +189,24 @@ function Copilot() {
                               <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-primary" />
                               Avg orders: {result.audience_summary.avg_orders}
                             </li>
-                            {result.audience_summary.avg_clv_inr != null &&
-                              result.audience_summary.avg_clv_inr > 0 && (
-                                <li className="flex items-start gap-2 text-xs text-muted-foreground">
-                                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
-                                  Avg CLV: {formatINR(result.audience_summary.avg_clv_inr)}
-                                </li>
-                              )}
-                            {result.audience_summary.avg_rfm_score != null &&
-                              result.audience_summary.avg_rfm_score > 0 && (
-                                <li className="flex items-start gap-2 text-xs text-muted-foreground">
-                                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-violet-500" />
-                                  RFM score: {result.audience_summary.avg_rfm_score}/5
-                                </li>
-                              )}
-                            {result.audience_summary.churn_risk_pct != null &&
-                              result.audience_summary.churn_risk_pct > 0 && (
-                                <li className="flex items-start gap-2 text-xs text-muted-foreground">
-                                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-rose-500" />
-                                  Churn risk: {result.audience_summary.churn_risk_pct}% high-risk
-                                </li>
-                              )}
+                            {result.audience_summary.avg_clv_inr != null && result.audience_summary.avg_clv_inr > 0 && (
+                              <li className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                                Avg CLV: {formatINR(result.audience_summary.avg_clv_inr)}
+                              </li>
+                            )}
+                            {result.audience_summary.avg_rfm_score != null && result.audience_summary.avg_rfm_score > 0 && (
+                              <li className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-violet-500" />
+                                RFM score: {result.audience_summary.avg_rfm_score}/5
+                              </li>
+                            )}
+                            {result.audience_summary.churn_risk_pct != null && result.audience_summary.churn_risk_pct > 0 && (
+                              <li className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-rose-500" />
+                                Churn risk: {result.audience_summary.churn_risk_pct}% high-risk
+                              </li>
+                            )}
                           </ul>
                         </CardContent>
                       </Card>
@@ -257,21 +227,11 @@ function Copilot() {
                           <div className="grid grid-cols-2 gap-2 pt-1">
                             <div className="rounded-md bg-muted/50 p-2">
                               <p className="text-[10px] text-muted-foreground">Est. Engagement</p>
-                              <p className="font-semibold text-sm">
-                                {(result.expected_outcome.expected_engagement_rate * 100).toFixed(
-                                  1,
-                                )}
-                                %
-                              </p>
+                              <p className="font-semibold text-sm">{(result.expected_outcome.expected_engagement_rate * 100).toFixed(1)}%</p>
                             </div>
                             <div className="rounded-md bg-muted/50 p-2">
                               <p className="text-[10px] text-muted-foreground">Est. Conversion</p>
-                              <p className="font-semibold text-sm">
-                                {(result.expected_outcome.expected_conversion_rate * 100).toFixed(
-                                  1,
-                                )}
-                                %
-                              </p>
+                              <p className="font-semibold text-sm">{(result.expected_outcome.expected_conversion_rate * 100).toFixed(1)}%</p>
                             </div>
                           </div>
                         </CardContent>
@@ -289,21 +249,15 @@ function Copilot() {
                       <CardContent className="grid grid-cols-3 gap-3">
                         <div>
                           <p className="text-[10px] text-muted-foreground">Reach</p>
-                          <p className="font-semibold tabular-nums">
-                            {formatNum(result.expected_outcome.estimated_reach)}
-                          </p>
+                          <p className="font-semibold tabular-nums">{formatNum(result.expected_outcome.estimated_reach)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] text-muted-foreground">Revenue</p>
-                          <p className="font-semibold tabular-nums text-emerald-600">
-                            {formatINR(result.expected_outcome.expected_revenue)}
-                          </p>
+                          <p className="font-semibold tabular-nums text-emerald-600">{formatINR(result.expected_outcome.expected_revenue)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] text-muted-foreground">Conversion</p>
-                          <p className="font-semibold tabular-nums">
-                            {(result.expected_outcome.expected_conversion_rate * 100).toFixed(1)}%
-                          </p>
+                          <p className="font-semibold tabular-nums">{(result.expected_outcome.expected_conversion_rate * 100).toFixed(1)}%</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -320,11 +274,7 @@ function Copilot() {
                         </pre>
                         <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
                           <Button variant="outline" size="sm" asChild>
-                            <Link
-                              to="/campaigns/$id"
-                              params={{ id: String(result.campaign_id ?? "") }}
-                              disabled={!result.campaign_id}
-                            >
+                            <Link to="/campaigns/$id" params={{ id: String(result.campaign_id) }}>
                               Edit message
                             </Link>
                           </Button>
@@ -333,10 +283,6 @@ function Copilot() {
                             className="gap-1.5"
                             disabled={launch.isPending}
                             onClick={() => {
-                              if (!result.campaign_id) {
-                                toast.error("Campaign draft was not created by the backend.");
-                                return;
-                              }
                               launch.mutate(result.campaign_id, {
                                 onSuccess: () => {
                                   toast.success("Campaign launched!", {
@@ -347,11 +293,7 @@ function Copilot() {
                               });
                             }}
                           >
-                            {launch.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Rocket className="h-4 w-4" />
-                            )}
+                            {launch.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />} 
                             {launch.isPending ? "Launching..." : "Launch campaign"}
                           </Button>
                         </div>
@@ -383,11 +325,7 @@ function Copilot() {
                   onClick={() => ask(input)}
                   disabled={!input.trim() || thinking}
                 >
-                  {thinking ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowUp className="h-4 w-4" />
-                  )}
+                  {thinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -398,9 +336,7 @@ function Copilot() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">Prebuilt segments</CardTitle>
-                <CardDescription className="text-xs">
-                  Click to instantly launch a campaign
-                </CardDescription>
+                <CardDescription className="text-xs">Click to instantly launch a campaign</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 {SEGMENT_PROMPTS.map((s) => (
@@ -423,30 +359,10 @@ function Copilot() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-xs text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <Badge variant="secondary" className="mt-0.5">
-                      1
-                    </Badge>{" "}
-                    Segment customers from natural language
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Badge variant="secondary" className="mt-0.5">
-                      2
-                    </Badge>{" "}
-                    Pick the highest-ROI channel
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Badge variant="secondary" className="mt-0.5">
-                      3
-                    </Badge>{" "}
-                    Draft a personalized message
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Badge variant="secondary" className="mt-0.5">
-                      4
-                    </Badge>{" "}
-                    Forecast reach, engagement & revenue
-                  </li>
+                  <li className="flex items-start gap-2"><Badge variant="secondary" className="mt-0.5">1</Badge> Segment customers from natural language</li>
+                  <li className="flex items-start gap-2"><Badge variant="secondary" className="mt-0.5">2</Badge> Pick the highest-ROI channel</li>
+                  <li className="flex items-start gap-2"><Badge variant="secondary" className="mt-0.5">3</Badge> Draft a personalized message</li>
+                  <li className="flex items-start gap-2"><Badge variant="secondary" className="mt-0.5">4</Badge> Forecast reach, engagement & revenue</li>
                 </ul>
               </CardContent>
             </Card>

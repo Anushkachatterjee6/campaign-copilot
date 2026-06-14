@@ -4,7 +4,6 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { useState } from "react";
 
 import { Topbar } from "@/components/topbar";
-import { ChartShell } from "@/components/chart-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChannelBadge, StatusBadge } from "@/components/status-badge";
@@ -75,7 +74,7 @@ function CampaignDetail() {
     <div className="flex min-h-screen flex-col">
       <Topbar
         title={details.name}
-        description={`${details.channel.charAt(0).toUpperCase() + details.channel.slice(1)} campaign · created ${new Date(details.created_at).toLocaleDateString()}`}
+        description={`${(details.channel || "email").charAt(0).toUpperCase() + (details.channel || "email").slice(1)} campaign · created ${new Date(details.created_at).toLocaleDateString()}`}
         actions={
           <>
             <Button asChild variant="ghost" size="sm" className="gap-1.5">
@@ -100,8 +99,8 @@ function CampaignDetail() {
       />
       <main className="flex-1 space-y-6 p-4 md:p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge status={details.status.charAt(0).toUpperCase() + details.status.slice(1) as any} />
-          <ChannelBadge channel={details.channel.charAt(0).toUpperCase() + details.channel.slice(1) as any} />
+          <StatusBadge status={(details.status || "draft").charAt(0).toUpperCase() + (details.status || "draft").slice(1) as any} />
+          <ChannelBadge channel={(details.channel || "email").charAt(0).toUpperCase() + (details.channel || "email").slice(1) as any} />
           <span className="text-xs text-muted-foreground">Audience: {formatNum(details.audience_size)} customers</span>
         </div>
 
@@ -130,7 +129,7 @@ function CampaignDetail() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <Row label="Total recipients" value={formatNum(details.audience_size)} />
-              <Row label="Channel" value={<ChannelBadge channel={details.channel.charAt(0).toUpperCase() + details.channel.slice(1) as any} />} />
+              <Row label="Channel" value={<ChannelBadge channel={(details.channel || "email").charAt(0).toUpperCase() + (details.channel || "email").slice(1) as any} />} />
               <Row label="Segment" value={details.segment_name} />
               <Row label="Goal" value={details.goal} />
             </CardContent>
@@ -157,21 +156,16 @@ function CampaignDetail() {
               <CardTitle>Conversion funnel</CardTitle>
               <CardDescription>Drop-off across each stage of the journey.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartShell
-                isEmpty={funnel.every((f) => f.value === 0)}
-                empty="Launch this campaign to start tracking delivery and engagement."
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={funnel} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                    <XAxis type="number" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis dataKey="stage" type="category" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} width={80} />
-                    <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-                    <Bar dataKey="value" fill="hsl(217 91% 60%)" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartShell>
+            <CardContent className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={funnel} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis dataKey="stage" type="category" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} width={80} />
+                  <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+                  <Bar dataKey="value" fill="hsl(217 91% 60%)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>

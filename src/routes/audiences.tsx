@@ -82,7 +82,8 @@ function AudienceBuilder() {
 
   // Load a sample of real customers for the preview
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({ page: 1 });
-  const previewCustomers = customersData?.slice(0, 6) ?? [];
+  const customersArray = Array.isArray(customersData) ? customersData : (customersData?.results ?? []);
+  const previewCustomers = customersArray.slice(0, 6);
 
   const result: AudienceBuilderResponse | null = audienceBuilder.data ?? null;
 

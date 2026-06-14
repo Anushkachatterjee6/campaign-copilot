@@ -2,7 +2,10 @@
 // Base API client — wraps fetch with base URL, headers, error handling
 // ---------------------------------------------------------------------------
 
-import { getApiBase } from "./config";
+// In production, VITE_API_BASE_URL must be set to the deployed backend URL (e.g. https://campaign-copilot-api.onrender.com).
+// In local development it falls back to http://127.0.0.1:8000 so nothing breaks.
+const _rawBase = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const API_BASE = _rawBase.replace(/\/$/, "") + "/api";
 
 export class ApiClientError extends Error {
   constructor(
@@ -16,28 +19,15 @@ export class ApiClientError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const url = `${getApiBase()}${path}`;
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...(init.headers ?? {}),
-      },
-    });
-  } catch (err) {
-    const hint =
-      getApiBase().startsWith("/") && !import.meta.env.DEV
-        ? " Check VITE_API_BASE_URL / API_BASE_URL in your deployment settings."
-        : "";
-    throw new ApiClientError(
-      0,
-      "NETWORK_ERROR",
-      `Could not reach the API at ${url}.${hint} ${err instanceof Error ? err.message : ""}`.trim(),
-    );
-  }
+  const url = `${API_BASE}${path}`;
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
 
   if (!res.ok) {
     let code = "API_ERROR";

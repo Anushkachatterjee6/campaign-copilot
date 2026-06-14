@@ -1,4 +1,4 @@
-name: Deploy backend to HuggingFace Spaces
+﻿name: Deploy backend to HuggingFace Spaces
 
 # Triggers: any push to master/main that touches the backend OR this workflow
 on:
@@ -13,18 +13,31 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate HuggingFace secrets
+        env:
+          HF_TOKEN:      ${{ secrets.HF_TOKEN }}
+          HF_SPACE:      ${{ secrets.HF_SPACE }}
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::Missing HF_TOKEN repository secret."
+            exit 1
+          fi
+          SPACE="${HF_SPACE:-${HF_SPACE_NAME:-campaign-copilot-api}}"
+          SPACE="${SPACE##*/}"
+          echo "HF_SPACE=$SPACE" >> "$GITHUB_ENV"
+          echo "Target Space: ${SPACE}"
+
       - name: Prepare HuggingFace deployment bundle
         run: |
           mkdir -p hf_deploy
 
-          # Copy all backend source (exclude dev-only files)
+          # Copy backend source into the Space repo root (exclude dev-only files)
           rsync -av \
             --exclude '__pycache__' \
             --exclude '*.pyc' \
@@ -33,37 +46,106 @@ jobs:
             --exclude 'db.sqlite3' \
             --exclude 'staticfiles/' \
             --exclude '.pytest_cache/' \
+            --exclude 'Dockerfile' \
             backend/ hf_deploy/
 
-          # Replace with HF-specific Dockerfile and README
+          # HF-specific Dockerfile and README (README frontmatter sets sdk: docker)
           cp .github/hf/Dockerfile hf_deploy/Dockerfile
-          cp .github/hf/README.md  hf_deploy/README.md
+          cp .github/hf/README.md hf_deploy/README.md
 
           echo "--- Files to be deployed ---"
           find hf_deploy -type f | sort
 
+          test -f hf_deploy/manage.py
+          test -f hf_deploy/requirements.txt
+          test -f hf_deploy/start.sh
+          test -f hf_deploy/Dockerfile
+          test -f hf_deploy/README.md
+
       - name: Push to HuggingFace Space
         env:
-          HF_TOKEN:      ${{ secrets.HF_TOKEN }}
-          HF_USERNAME:   ${{ secrets.HF_USERNAME }}
-          HF_SPACE:      ${{ secrets.HF_SPACE }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          echo "Installing huggingface_hub..."
+          set -euo pipefail
+
           python -m pip install --upgrade pip
           pip install huggingface_hub
-          
-          echo "Uploading files to Hugging Face Space..."
-          huggingface-cli upload "${HF_USERNAME}/${HF_SPACE}" ./hf_deploy / --repo-type space --token "${HF_TOKEN}" > hf_upload_log.txt 2>&1 || {
-             echo "Upload failed! Pushing log to error branch..."
-             git config user.email "github-actions@github.com"
-             git config user.name "GitHub Actions"
-             git checkout -b deploy-error
-             mv hf_upload_log.txt error.log
-             git add error.log
-             git commit -m "Deployment error log"
-             git push -f origin deploy-error
-             exit 1
-          }
-          
-          echo "✅ Deployed to: https://huggingface.co/spaces/$HF_USERNAME/$HF_SPACE"
-          echo "🌐 API URL:     https://$HF_USERNAME-$HF_SPACE.hf.space"
+
+          python <<'PY'
+          import os
+          import subprocess
+          import sys
+
+          from huggingface_hub import HfApi
+          from huggingface_hub.utils import HfHubHTTPError
+
+          token = os.environ["HF_TOKEN"].strip()
+          space = os.environ.get("HF_SPACE", "campaign-copilot-api").strip()
+          if "/" in space:
+              space = space.split("/")[-1]
+          sha = os.environ.get("GITHUB_SHA", "")[:7]
+
+          api = HfApi(token=token)
+
+          try:
+              whoami = api.whoami()
+          except Exception as exc:
+              print(f"::error::HF_TOKEN is invalid or expired: {exc}")
+              sys.exit(1)
+
+          username = whoami.get("name") or whoami.get("fullname")
+          if not username:
+              print("::error::Could not resolve Hugging Face username from token.")
+              sys.exit(1)
+
+          repo_id = f"{username}/{space}"
+          print(f"Token owner: {username}")
+          print(f"Target repo: spaces/{repo_id}")
+
+          def upload_via_api() -> None:
+              print("Uploading via huggingface_hub API ...")
+              api.upload_folder(
+                  folder_path="hf_deploy",
+                  path_in_repo=".",
+                  repo_id=repo_id,
+                  repo_type="space",
+                  commit_message=f"Deploy {sha}" if sha else "Deploy from GitHub Actions",
+              )
+
+          def upload_via_git() -> None:
+              print("Uploading via git push fallback ...")
+              clone_url = f"https://user:{token}@huggingface.co/spaces/{repo_id}"
+              subprocess.run(["git", "clone", "--depth", "1", clone_url, "hf_repo"], check=True)
+              subprocess.run(
+                  "find hf_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +",
+                  shell=True,
+                  check=True,
+              )
+              subprocess.run(["cp", "-a", "hf_deploy/.", "hf_repo/"], check=True)
+              subprocess.run(["git", "-C", "hf_repo", "config", "user.email", "github-actions@github.com"], check=True)
+              subprocess.run(["git", "-C", "hf_repo", "config", "user.name", "GitHub Actions"], check=True)
+              subprocess.run(["git", "-C", "hf_repo", "add", "--all"], check=True)
+              diff = subprocess.run(["git", "-C", "hf_repo", "diff", "--staged", "--quiet"])
+              if diff.returncode != 0:
+                  msg = f"Deploy {sha}" if sha else "Deploy from GitHub Actions"
+                  subprocess.run(["git", "-C", "hf_repo", "commit", "-m", msg], check=True)
+              subprocess.run(["git", "-C", "hf_repo", "push", "origin", "HEAD:main"], check=True)
+
+          try:
+              upload_via_api()
+          except HfHubHTTPError as exc:
+              print(f"API upload failed ({exc.response.status_code}): {exc}")
+              upload_via_git()
+          except Exception as exc:
+              print(f"API upload failed: {type(exc).__name__}: {exc}")
+              upload_via_git()
+
+          api_url = f"https://{username}-{space}.hf.space"
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"HF_USERNAME={username}\n")
+              env_file.write(f"HF_API_URL={api_url}\n")
+
+          print(f"Deployed to https://huggingface.co/spaces/{repo_id}")
+          print(f"API URL: {api_url}")
+          PY
+

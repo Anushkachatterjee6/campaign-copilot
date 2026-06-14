@@ -41,6 +41,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
 
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -92,21 +93,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Campaign Copilot — AI-native CRM" },
-      {
-        name: "description",
-        content:
-          "Campaign Copilot is an AI-powered CRM dashboard for marketers to build, launch, and analyze customer campaigns.",
-      },
-      {
-        property: "og:description",
-        content:
-          "Campaign Copilot is an AI-powered CRM dashboard for marketers to build, launch, and analyze customer campaigns.",
-      },
-      {
-        name: "twitter:description",
-        content:
-          "Campaign Copilot is an AI-powered CRM dashboard for marketers to build, launch, and analyze customer campaigns.",
-      },
+      { name: "description", content: "Campaign Copilot is an AI-powered CRM dashboard for marketers to build, launch, and analyze customer campaigns." },
+      { property: "og:description", content: "Campaign Copilot is an AI-powered CRM dashboard for marketers to build, launch, and analyze customer campaigns." },
+      { name: "twitter:description", content: "Campaign Copilot is an AI-powered CRM dashboard for marketers to build, launch, and analyze customer campaigns." },
       { property: "og:image", content: "/og-image.png" },
       { name: "twitter:image", content: "/og-image.png" },
     ],
@@ -119,26 +108,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
-  // Runtime API URL from Vercel/Nitro env (available during SSR — not baked at build time).
-  const runtimeApiBase =
-    (typeof process !== "undefined" &&
-      (process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || "")) ||
-    "";
-
   return (
     <html lang="en">
       <head>
         <HeadContent />
-        {runtimeApiBase ? (
-          <>
-            <meta name="api-base-url" content={runtimeApiBase.replace(/\/$/, "")} />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `window.__API_BASE_URL__=${JSON.stringify(runtimeApiBase.replace(/\/$/, ""))};`,
-              }}
-            />
-          </>
-        ) : null}
       </head>
       <body>
         {children}
@@ -169,7 +142,7 @@ function RootComponent() {
         ws = new WebSocket(wsUrl);
         ws.onmessage = () => {
           // Refresh live CRM data across the app whenever a communication event occurs
-          queryClient.invalidateQueries({ queryKey: ["stats"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
           queryClient.invalidateQueries({ queryKey: ["analytics-charts"] });
           queryClient.invalidateQueries({ queryKey: ["campaigns"] });
         };
