@@ -125,14 +125,45 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    const ws = new WebSocket("ws://127.0.0.1:8000/ws/live/");
-    ws.onmessage = (event) => {
-      // Refresh live CRM data across the app whenever a communication event occurs
-      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["analytics-charts"] });
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    // Derive WebSocket URL from env var, falling back to localhost for dev.
+    // In production VITE_WS_BASE_URL should be e.g. wss://campaign-copilot-api.onrender.com
+    const rawWsBase =
+      import.meta.env.VITE_WS_BASE_URL ??
+      (import.meta.env.VITE_API_BASE_URL
+        ? import.meta.env.VITE_API_BASE_URL.replace(/^http/, "ws")
+        : "ws://127.0.0.1:8000");
+    const wsUrl = rawWsBase.replace(/\/$/, "") + "/ws/live/";
+
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onmessage = () => {
+          // Refresh live CRM data across the app whenever a communication event occurs
+          queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+          queryClient.invalidateQueries({ queryKey: ["analytics-charts"] });
+          queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+        };
+        ws.onerror = () => {
+          // Silently swallow — WebSocket is a nice-to-have for live updates,
+          // not required for the app to function.
+        };
+        ws.onclose = () => {
+          // Retry after 30s if unexpectedly closed (e.g. Render free tier spin-up)
+          reconnectTimeout = setTimeout(connect, 30_000);
+        };
+      } catch {
+        // WebSocket not available in this environment — degrade gracefully
+      }
+    }
+
+    connect();
+    return () => {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      ws?.close();
     };
-    return () => ws.close();
   }, [queryClient]);
 
   return (
