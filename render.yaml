@@ -1,0 +1,24 @@
+services:
+  # ── Django backend — deployed via Dockerfile ────────────────────────────────
+  # Render free web service: no credit card required, spins down after 15 min idle
+  # Database: Neon free PostgreSQL (neon.tech) — no credit card required
+  - type: web
+    name: campaign-copilot-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/stats/
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true       # Render auto-generates a secure 50-char secret
+      - key: CORS_ALLOW_ALL
+        value: "true"
+      - key: FRONTEND_URL
+        value: ""                 # Set to your Vercel URL in the Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false               # Enter manually in Render dashboard → Environment
+      - key: DATABASE_URL
+        sync: false               # Enter your Neon connection string here (see DEPLOYMENT.md)
+    autoDeploy: true

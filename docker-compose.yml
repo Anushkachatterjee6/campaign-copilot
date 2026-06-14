@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: engage_pilot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d engage_pilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  crm:
+    build:
+      context: ./backend
+    environment:
+      DJANGO_DEBUG: "true"
+      DJANGO_SECRET_KEY: "dev-only-change-me"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,crm"
+      POSTGRES_DB: engage_pilot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  channel-simulator:
+    build:
+      context: ./channel_simulator
+    environment:
+      CRM_RECEIPT_CALLBACK_URL: "http://crm:8000/api/communications/receipts/"
+      PROB_DELIVERED: "0.94"
+      PROB_FAILED: "0.04"
+      PROB_OPENED: "0.55"
+      PROB_READ: "0.48"
+      PROB_CLICKED: "0.16"
+      CALLBACK_MAX_RETRIES: "3"
+      CALLBACK_RETRY_BASE_SECONDS: "0.5"
+      EVENT_DELAY_SECONDS: "0.25"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - crm
+
+volumes:
+  postgres_data:

@@ -1,0 +1,12 @@
+Django>=5.0,<6.0
+djangorestframework>=3.15,<4.0
+google-genai>=0.5,<1.0
+psycopg[binary]>=3.1,<4.0
+django-cors-headers>=4.0.0
+python-dotenv>=1.0.0
+channels>=4.0.0
+daphne>=4.0.0
+# Production dependencies
+whitenoise[brotli]>=6.0,<7.0
+dj-database-url>=2.0,<3.0
+gunicorn>=21.0,<23.0

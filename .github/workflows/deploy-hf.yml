@@ -1,0 +1,69 @@
+name: Deploy backend to HuggingFace Spaces
+
+# Triggers: any push to master/main that touches the backend OR this workflow
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-hf.yml'
+      - '.github/hf/**'
+  workflow_dispatch:   # Manual trigger from GitHub Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare HuggingFace deployment bundle
+        run: |
+          mkdir -p hf_deploy
+
+          # Copy all backend source (exclude dev-only files)
+          rsync -av \
+            --exclude '__pycache__' \
+            --exclude '*.pyc' \
+            --exclude '*.pyo' \
+            --exclude '.env' \
+            --exclude 'db.sqlite3' \
+            --exclude 'staticfiles/' \
+            --exclude '.pytest_cache/' \
+            backend/ hf_deploy/
+
+          # Replace with HF-specific Dockerfile and README
+          cp .github/hf/Dockerfile hf_deploy/Dockerfile
+          cp .github/hf/README.md  hf_deploy/README.md
+
+          echo "--- Files to be deployed ---"
+          find hf_deploy -type f | sort
+
+      - name: Push to HuggingFace Space
+        env:
+          HF_TOKEN:      ${{ secrets.HF_TOKEN }}
+          HF_USERNAME:   ${{ secrets.HF_USERNAME }}
+          HF_SPACE:      ${{ secrets.HF_SPACE }}
+        run: |
+          echo "Installing huggingface_hub..."
+          python -m pip install --upgrade pip
+          pip install huggingface_hub
+          
+          echo "Uploading files to Hugging Face Space..."
+          huggingface-cli upload "${HF_USERNAME}/${HF_SPACE}" ./hf_deploy / --repo-type space --token "${HF_TOKEN}" > hf_upload_log.txt 2>&1 || {
+             echo "Upload failed! Pushing log to error branch..."
+             git config user.email "github-actions@github.com"
+             git config user.name "GitHub Actions"
+             git checkout -b deploy-error
+             mv hf_upload_log.txt error.log
+             git add error.log
+             git commit -m "Deployment error log"
+             git push -f origin deploy-error
+             exit 1
+          }
+          
+          echo "✅ Deployed to: https://huggingface.co/spaces/$HF_USERNAME/$HF_SPACE"
+          echo "🌐 API URL:     https://$HF_USERNAME-$HF_SPACE.hf.space"
