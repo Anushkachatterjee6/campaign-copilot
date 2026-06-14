@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import appCss from "../styles.css?url";
 
@@ -123,6 +123,17 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://127.0.0.1:8000/ws/live/");
+    ws.onmessage = (event) => {
+      // Refresh live CRM data across the app whenever a communication event occurs
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics-charts"] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    };
+    return () => ws.close();
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

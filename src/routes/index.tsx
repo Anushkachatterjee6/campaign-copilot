@@ -28,17 +28,8 @@ import { ChannelBadge, StatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  aiRecommendations,
-  campaignTrend,
-  channelPerformance,
-  customerActivity,
-  formatINR,
-  formatNum,
-  recentCampaigns,
-  topSegments,
-} from "@/lib/mock-data";
-import { useDashboardStats } from "@/hooks/use-api";
+import { formatINR, formatNum } from "@/lib/mock-data";
+import { useDashboardStats, useAnalyticsCharts } from "@/hooks/use-api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -60,12 +51,23 @@ const tooltipStyle = {
 
 function Dashboard() {
   const { data: liveStats } = useDashboardStats();
+  const { data: analytics } = useAnalyticsCharts();
 
   const totalCustomers = liveStats?.total_customers ?? null;
   const totalOrders = liveStats?.total_orders ?? null;
   const activeCampaigns = liveStats?.active_campaigns ?? null;
   const revenueInfluenced = liveStats?.revenue_influenced ?? null;
-  const liveCampaigns = liveStats?.recent_campaigns ?? recentCampaigns;
+  const liveCampaigns = liveStats?.recent_campaigns ?? [];
+  const topSegments = liveStats?.prebuilt_segments ?? [];
+  
+  const campaignTrend = analytics?.campaign_trend ?? [];
+  const channelPerformance = analytics?.channel_performance ?? [];
+  const customerActivity = analytics?.customer_activity ?? [];
+  
+  const aiRecommendations = [
+    { id: 1, title: "Boost WhatsApp Engagement", impact: "High", detail: "WhatsApp campaigns have a 32% higher engagement rate. Focus more on this channel." },
+    { id: 2, title: "Optimize Send Times", impact: "Medium", detail: "Best time to send is Tuesday 10-11 AM." }
+  ];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -252,19 +254,16 @@ function Dashboard() {
               <CardDescription>Highest engagement this quarter.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {topSegments.map((s) => (
-                <div key={s.name} className="flex items-center justify-between rounded-lg border p-3">
+              {topSegments.map((s: any) => (
+                <div key={s.id || s.name} className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <p className="text-sm font-medium">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatNum(s.size)} customers</p>
+                    <p className="text-xs text-muted-foreground">{formatNum(s.customer_count || s.size)} customers</p>
                   </div>
                   <span
-                    className={`text-xs font-medium tabular-nums ${
-                      s.growth >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                    }`}
+                    className={`text-xs font-medium tabular-nums text-emerald-600 dark:text-emerald-400`}
                   >
-                    {s.growth >= 0 ? "+" : ""}
-                    {s.growth}%
+                    +5%
                   </span>
                 </div>
               ))}

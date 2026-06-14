@@ -59,6 +59,19 @@ class Customer(TimeStampedModel):
         help_text="Composite RFM quintile score 1-5 (5 = best).",
     )
 
+    @property
+    def health_score(self):
+        return int((self.rfm_score / 5.0) * 100) if self.rfm_score else 0
+
+    @property
+    def health_score_label(self):
+        score = self.health_score
+        if score >= 80:
+            return "Healthy"
+        elif score >= 50:
+            return "At Risk"
+        return "High Churn Risk"
+
     # ── Customer Lifetime Value ────────────────────────────────────────────────
     clv = models.DecimalField(
         max_digits=14,
@@ -205,6 +218,11 @@ class Campaign(TimeStampedModel):
         blank=True,
     )
     message = models.TextField(blank=True, default="")
+    expected_outcome = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Predicted reach, engagement, conversion, and revenue from AI Copilot.",
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -296,4 +314,28 @@ class CommunicationEvent(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.communication_id} - {self.event_type} at {self.timestamp:%Y-%m-%d %H:%M}"
+        return f"{self.communication.id} - {self.event_type} at {self.timestamp}"
+
+
+# ── WebSockets Signals ────────────────────────────────────────────────────────
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
+@receiver(post_save, sender=CommunicationEvent)
+def broadcast_communication_event(sender, instance, created, **kwargs):
+    if created:
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                "live_crm_updates",
+                {
+                    "type": "crm.event",
+                    "data": {
+                        "event_type": instance.event_type,
+                        "channel": instance.communication.campaign.channel,
+                        "timestamp": instance.timestamp.isoformat()
+                    }
+                }
+            )

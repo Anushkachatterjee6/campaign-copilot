@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Sparkles, Send, Users2, MessageSquare, Rocket, ArrowUp, TrendingUp, AlertCircle, Loader2, ShieldAlert, Trophy, Cpu, Flower2, ShoppingBag, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ChannelBadge } from "@/components/status-badge";
 import { samplePrompts, formatNum, formatINR } from "@/lib/mock-data";
-import { useCampaignCopilot } from "@/hooks/use-api";
+import { useCampaignCopilot, useLaunchCampaign } from "@/hooks/use-api";
 import type { CampaignCopilotResponse } from "@/lib/api/types";
 
 export const Route = createFileRoute("/copilot")({
@@ -53,8 +53,10 @@ const SEGMENT_PROMPTS: { icon: React.ReactNode; label: string; prompt: string }[
 
 function Copilot() {
   const [input, setInput] = useState("");
-  const [submittedPrompt, setSubmittedPrompt] = useState("");
+  const [submittedPrompt, setSubmittedPrompt] = useState<string | null>(null);
   const copilot = useCampaignCopilot();
+  const launch = useLaunchCampaign();
+  const navigate = useNavigate();
 
   const ask = (q: string) => {
     if (!q.trim()) return;
@@ -271,17 +273,28 @@ function Copilot() {
                           {result.generated_message}
                         </pre>
                         <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                          <Button variant="outline" size="sm">Edit message</Button>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to="/campaigns/$id" params={{ id: String(result.campaign_id) }}>
+                              Edit message
+                            </Link>
+                          </Button>
                           <Button
                             size="sm"
                             className="gap-1.5"
-                            onClick={() =>
-                              toast.success("Campaign queued for launch!", {
-                                description: `${formatNum(result.audience_summary.audience_size)} customers will receive this on ${channelDisplay}.`,
-                              })
-                            }
+                            disabled={launch.isPending}
+                            onClick={() => {
+                              launch.mutate(result.campaign_id, {
+                                onSuccess: () => {
+                                  toast.success("Campaign launched!", {
+                                    description: `${formatNum(result.audience_summary.audience_size)} customers will receive this on ${channelDisplay}.`,
+                                  });
+                                  navigate({ to: "/campaigns" });
+                                },
+                              });
+                            }}
                           >
-                            <Rocket className="h-4 w-4" /> Launch campaign
+                            {launch.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />} 
+                            {launch.isPending ? "Launching..." : "Launch campaign"}
                           </Button>
                         </div>
                       </CardContent>

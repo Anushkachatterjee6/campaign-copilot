@@ -123,9 +123,16 @@ class CampaignViewSet(viewsets.ModelViewSet):
     ordering_fields = ["name", "status", "channel", "created_at", "audience_size"]
     ordering = ["-created_at"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs
+
     @action(detail=True, methods=["post"], url_path="launch")
     def launch(self, request, pk=None):
-        """Transition a Draft/Scheduled campaign to Active."""
+        """Transition a Draft/Scheduled campaign to Active and dispatch communications."""
         campaign = self.get_object()
         if campaign.status not in (CampaignStatus.DRAFT, CampaignStatus.SCHEDULED):
             return Response(
@@ -134,6 +141,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
             )
         campaign.status = CampaignStatus.ACTIVE
         campaign.save(update_fields=["status", "updated_at"])
+        
+        # Dispatch in background
+        from apps.crm.services.campaign_dispatcher import CampaignDispatcherService
+        dispatcher = CampaignDispatcherService()
+        dispatcher.dispatch_in_background(campaign)
+        
         return Response(CampaignSerializer(campaign).data)
 
     @action(detail=True, methods=["get"], url_path="communications")

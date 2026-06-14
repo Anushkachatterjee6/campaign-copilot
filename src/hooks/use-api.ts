@@ -60,6 +60,17 @@ export function useDashboardStats() {
   });
 }
 
+export function useAnalyticsCharts() {
+  return useQuery({
+    queryKey: ["analytics-charts"],
+    queryFn: () => {
+      // Must import the function we just added to endpoints.ts dynamically if not exported above
+      return import("@/lib/api/endpoints").then(m => m.fetchAnalyticsCharts());
+    },
+    staleTime: 60_000,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Customers
 // ---------------------------------------------------------------------------

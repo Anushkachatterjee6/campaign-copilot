@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Mail, MapPin, Sparkles } from "lucide-react";
 
 import { Topbar } from "@/components/topbar";
@@ -6,44 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { ChannelBadge } from "@/components/status-badge";
 import { Progress } from "@/components/ui/progress";
-import { customers, formatINR } from "@/lib/mock-data";
+import { formatINR } from "@/lib/mock-data";
+
+import { useCustomer, useCustomerOrders, useCustomerCommunications } from "@/hooks/use-api";
 
 export const Route = createFileRoute("/customers/$id")({
-  loader: ({ params }) => {
-    const c = customers.find((x) => x.id === params.id);
-    if (!c) throw notFound();
-    return c;
-  },
-  notFoundComponent: () => (
-    <div className="p-10 text-center">
-      <p className="text-sm text-muted-foreground">Customer not found.</p>
-      <Button asChild variant="link"><Link to="/customers">Back to customers</Link></Button>
-    </div>
-  ),
-  errorComponent: ({ error, reset }) => (
-    <div className="p-10 text-center">
-      <p className="text-sm text-muted-foreground">{error.message}</p>
-      <Button onClick={reset} variant="outline" className="mt-2">Try again</Button>
-    </div>
-  ),
   component: CustomerDetail,
 });
 
-const purchases = [
-  { date: "2025-06-07", item: "Ethiopian Yirgacheffe 500g", amount: 1240 },
-  { date: "2025-05-12", item: "Cold Brew Bundle", amount: 1890 },
-  { date: "2025-04-21", item: "Espresso Subscription · April", amount: 999 },
-  { date: "2025-03-18", item: "Premium Grinder", amount: 8499 },
-];
-
-const campaignsSent = [
-  { name: "Diwali Premium Coffee Push", channel: "WhatsApp", status: "Opened" },
-  { name: "Subscription renewal nudge", channel: "Push", status: "Clicked" },
-  { name: "Monsoon Brew Bundle", channel: "Email", status: "Converted" },
-];
-
 function CustomerDetail() {
-  const c = Route.useLoaderData();
+  const params = Route.useParams();
+  const customerId = Number(params.id);
+  
+  const { data: c, isLoading, isError, error } = useCustomer(customerId);
+  const { data: orders } = useCustomerOrders(customerId);
+  const { data: communications } = useCustomerCommunications(customerId);
+  
+  if (isLoading) return <div className="p-10 text-center text-muted-foreground">Loading...</div>;
+  if (isError || !c) return (
+    <div className="p-10 text-center">
+      <p className="text-sm text-muted-foreground">{(error as Error)?.message || "Customer not found."}</p>
+      <Button asChild variant="link"><Link to="/customers">Back to customers</Link></Button>
+    </div>
+  );
   return (
     <div className="flex min-h-screen flex-col">
       <Topbar
@@ -70,22 +55,23 @@ function CustomerDetail() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Stat label="Total Spend" value={formatINR(c.spend)} />
-                <Stat label="Last Purchase" value={c.lastPurchase} />
-                <Stat label="Channel" value={<ChannelBadge channel={c.channel} />} />
-                <Stat label="Engagement" value={`${c.score}/100`} />
+                <Stat label="Total Spend" value={c.clv !== undefined && c.clv !== null ? formatINR(Number(c.clv)) : "—"} />
+                <Stat label="Total Orders" value={c.rfm_frequency !== undefined ? c.rfm_frequency : "—"} />
+                <Stat label="Channel" value={<ChannelBadge channel={(c.preferred_channel || "email").charAt(0).toUpperCase() + (c.preferred_channel || "email").slice(1) as any} />} />
+                <Stat label="RFM Score" value={`${c.rfm_score || 0}/5`} />
+                <Stat label="Health Score" value={c.health_score_label ? `${c.health_score_label} (${c.health_score})` : "N/A"} />
               </div>
               <div>
                 <div className="mb-1.5 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Engagement score</span>
-                  <span className="font-medium">{c.score}/100</span>
+                  <span className="text-muted-foreground">RFM Score</span>
+                  <span className="font-medium">{c.rfm_score || 0}/5</span>
                 </div>
-                <Progress value={c.score} />
+                <Progress value={(c.rfm_score || 0) * 20} />
               </div>
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
                 <Badge tone="ai">AI</Badge>
                 <p className="mt-1.5 text-muted-foreground">
-                  This customer is <span className="font-medium text-foreground">3.4× more likely</span> to respond on {c.channel}.
+                  This customer has a <span className="font-medium text-foreground">{c.churn_risk || "medium"}</span> churn risk based on recent activity.
                 </p>
               </div>
             </CardContent>
@@ -99,15 +85,21 @@ function CustomerDetail() {
               </CardHeader>
               <CardContent>
                 <div className="divide-y">
-                  {purchases.map((p) => (
-                    <div key={p.date} className="flex items-center justify-between py-2.5">
-                      <div>
-                        <p className="text-sm font-medium">{p.item}</p>
-                        <p className="text-xs text-muted-foreground">{p.date}</p>
+                  {orders?.length === 0 ? (
+                    <p className="py-4 text-sm text-muted-foreground">No recent orders.</p>
+                  ) : (
+                    orders?.slice(0, 10).map((p: any) => (
+                      <div key={p.id} className="flex items-center justify-between py-2.5">
+                        <div>
+                          <p className="text-sm font-medium">{p.category || "Order"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(p.order_date).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })}
+                          </p>
+                        </div>
+                        <p className="text-sm font-semibold tabular-nums">{formatINR(Number(p.amount))}</p>
                       </div>
-                      <p className="text-sm font-semibold tabular-nums">{formatINR(p.amount)}</p>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -119,15 +111,19 @@ function CustomerDetail() {
               </CardHeader>
               <CardContent>
                 <div className="divide-y">
-                  {campaignsSent.map((cmp) => (
-                    <div key={cmp.name} className="flex items-center justify-between py-2.5">
-                      <div>
-                        <p className="text-sm font-medium">{cmp.name}</p>
-                        <ChannelBadge channel={cmp.channel} />
+                  {communications?.length === 0 ? (
+                    <p className="py-4 text-sm text-muted-foreground">No campaigns received yet.</p>
+                  ) : (
+                    communications?.map((cmp: any) => (
+                      <div key={cmp.id} className="flex items-center justify-between py-2.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{cmp.campaign_name || "Campaign"}</p>
+                          <ChannelBadge channel={"Email" as any} /> {/* We don't have campaign channel on communication in API yet, mock it visually or use communication.channel if added */}
+                        </div>
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 capitalize">{cmp.status}</span>
                       </div>
-                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{cmp.status}</span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

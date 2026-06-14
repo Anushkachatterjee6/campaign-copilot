@@ -31,6 +31,9 @@ export interface Customer {
   rfm_frequency: number;   // total orders
   rfm_monetary: string;    // avg order value in INR (Decimal string)
   churn_risk: ChurnRisk;
+  // Health score derived fields
+  health_score: number;          // 0–100
+  health_score_label: "Healthy" | "At Risk" | "High Churn Risk";
   created_at: string;
   updated_at: string;
 }

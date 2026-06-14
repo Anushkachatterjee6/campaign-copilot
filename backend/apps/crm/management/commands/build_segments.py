@@ -118,7 +118,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         refresh = options["refresh"]
-        self.stdout.write("🏷  Building prebuilt segments…\n")
+        self.stdout.write("Building prebuilt segments...\n")
 
         for defn in PREBUILT_SEGMENTS:
             segment, created = Segment.objects.get_or_create(
@@ -151,12 +151,12 @@ class Command(BaseCommand):
             action = "Created" if created else "Updated"
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"  {'✅' if created else '🔄'}  [{action}] \"{segment.name}\" — {count} customers"
+                    f"  [{action}] \"{segment.name}\" -- {count} customers"
                 )
             )
 
         self.stdout.write("")
         self.stdout.write(self.style.SUCCESS("All 5 prebuilt segments are ready."))
         self.stdout.write(
-            "  → Visit the Audiences page or call GET /api/segments/?is_prebuilt=true"
+            "  --> Visit the Audiences page or call GET /api/segments/?is_prebuilt=true"
         )

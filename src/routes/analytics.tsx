@@ -21,15 +21,9 @@ import { Send, MailOpen, MousePointerClick, CheckCircle2, Inbox, Sparkles } from
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatCard } from "@/components/stat-card";
-import {
-  analyticsCards,
-  engagementTrend,
-  formatINR,
-  formatNum,
-  funnel,
-  revenueAttribution,
-} from "@/lib/mock-data";
+import { formatINR, formatNum } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
+import { useAnalyticsCharts } from "@/hooks/use-api";
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({
@@ -44,6 +38,28 @@ export const Route = createFileRoute("/analytics")({
 const COLORS = ["hsl(217 91% 60%)", "hsl(160 84% 39%)", "hsl(38 92% 50%)", "hsl(280 80% 60%)"];
 
 function Analytics() {
+  const { data: analytics, isLoading } = useAnalyticsCharts();
+  
+  const funnel = analytics?.funnel ?? [
+    { stage: "Sent", value: 0 },
+    { stage: "Delivered", value: 0 },
+    { stage: "Opened", value: 0 },
+    { stage: "Clicked", value: 0 },
+    { stage: "Converted", value: 0 },
+  ];
+  
+  const analyticsCards = {
+    sent: funnel[0].value,
+    delivered: funnel[1].value,
+    opened: funnel[2].value,
+    clicked: funnel[3].value,
+    converted: funnel[4].value,
+  };
+  
+  const engagementTrend = analytics?.engagement_trend ?? [];
+  const revenueAttribution = analytics?.revenue_attribution ?? [];
+  
+  if (isLoading) return <div className="p-10 text-center text-muted-foreground">Loading...</div>;
   return (
     <div className="flex min-h-screen flex-col">
       <Topbar title="Analytics" description="Full-funnel performance across every channel." />
@@ -67,7 +83,7 @@ function Analytics() {
                 <FunnelChart>
                   <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
                   <Funnel dataKey="value" data={funnel} isAnimationActive>
-                    {funnel.map((_, i) => (
+                    {funnel.map((_: any, i: number) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                     <LabelList position="right" dataKey="stage" stroke="none" fill="var(--foreground)" fontSize={12} />
@@ -149,7 +165,7 @@ function Analytics() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={revenueAttribution} dataKey="revenue" nameKey="channel" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                    {revenueAttribution.map((_, i) => (
+                    {revenueAttribution.map((_: any, i: number) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
@@ -158,7 +174,7 @@ function Analytics() {
               </ResponsiveContainer>
             </div>
             <div className="space-y-2">
-              {revenueAttribution.map((r, i) => (
+              {revenueAttribution.map((r: any, i: number) => (
                 <div key={r.channel} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />

@@ -18,15 +18,16 @@ import type {
 } from "./types";
 
 // ---------------------------------------------------------------------------
-// Dashboard
+// Dashboard & Analytics
 // ---------------------------------------------------------------------------
 export const fetchDashboardStats = () => api.get<DashboardStats>("/stats/");
+export const fetchAnalyticsCharts = () => api.get<any>("/analytics/charts/");
 
 // ---------------------------------------------------------------------------
 // Customers
 // ---------------------------------------------------------------------------
 export const fetchCustomers = (params?: { search?: string; ordering?: string; page?: number }) =>
-  api.get<PaginatedList<Customer>>("/customers/", params);
+  api.get<Customer[]>("/customers/", params);
 
 export const fetchCustomer = (id: number) => api.get<Customer>(`/customers/${id}/`);
 
@@ -47,7 +48,7 @@ export const fetchCustomerCommunications = (id: number) =>
 // Orders
 // ---------------------------------------------------------------------------
 export const fetchOrders = (params?: { search?: string; ordering?: string; page?: number }) =>
-  api.get<PaginatedList<Order>>("/orders/", params);
+  api.get<Order[]>("/orders/", params);
 
 export const fetchOrder = (id: number) => api.get<Order>(`/orders/${id}/`);
 
@@ -58,7 +59,7 @@ export const createOrder = (data: Omit<Order, "id" | "customer_name" | "created_
 // Segments
 // ---------------------------------------------------------------------------
 export const fetchSegments = (params?: { search?: string; ordering?: string; page?: number }) =>
-  api.get<PaginatedList<Segment>>("/segments/", params);
+  api.get<Segment[]>("/segments/", params);
 
 export const fetchSegment = (id: number) => api.get<Segment>(`/segments/${id}/`);
 
@@ -78,7 +79,7 @@ export const fetchCampaigns = (params?: {
   ordering?: string;
   page?: number;
   status?: string;
-}) => api.get<PaginatedList<Campaign>>("/campaigns/", params);
+}) => api.get<Campaign[]>("/campaigns/", params);
 
 export const fetchCampaign = (id: number) => api.get<Campaign>(`/campaigns/${id}/`);
 

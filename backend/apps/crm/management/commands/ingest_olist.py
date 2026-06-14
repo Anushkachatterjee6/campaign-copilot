@@ -198,17 +198,17 @@ class Command(BaseCommand):
 
         stats = IngestStats()
 
-        self.stdout.write("📦  Loading CSV files…")
+        self.stdout.write("Loading CSV files...")
         customers_csv = read_csv(data_dir / "olist_customers_dataset.csv")
         orders_csv = read_csv(data_dir / "olist_orders_dataset.csv")
         items_csv = read_csv(data_dir / "olist_order_items_dataset.csv")
         payments_csv = read_csv(data_dir / "olist_order_payments_dataset.csv")
         reviews_csv = read_csv(data_dir / "olist_order_reviews_dataset.csv")
         products_csv = read_csv(data_dir / "olist_products_dataset.csv")
-        self.stdout.write(self.style.SUCCESS("✅  CSVs loaded.\n"))
+        self.stdout.write(self.style.SUCCESS("CSVs loaded.\n"))
 
         # ── Build lookup maps ──────────────────────────────────────────────────
-        self.stdout.write("🔨  Building lookup maps…")
+        self.stdout.write("Building lookup maps...")
         product_category: dict[str, str] = {}  # product_id → CRM category
         for row in products_csv:
             pid = row.get("product_id", "").strip()
@@ -248,10 +248,10 @@ class Command(BaseCommand):
                 except (ValueError, TypeError):
                     pass
 
-        self.stdout.write(self.style.SUCCESS("✅  Lookup maps built.\n"))
+        self.stdout.write(self.style.SUCCESS("Lookup maps built.\n"))
 
         # ── Step 1: Customers ─────────────────────────────────────────────────
-        self.stdout.write(f"👥  Processing {len(customers_csv)} customer rows…")
+        self.stdout.write(f"Processing {len(customers_csv)} customer rows...")
         if options["clear"] and not dry_run:
             deleted_orders, _ = Order.objects.filter(olist_order_id__gt="").delete()
             deleted_customers, _ = Customer.objects.filter(olist_customer_id__gt="").delete()
@@ -307,12 +307,12 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"   ✅  Customers: {stats.customers_created} created, {stats.customers_skipped} skipped.\n"
+                f"   Customers: {stats.customers_created} created, {stats.customers_skipped} skipped.\n"
             )
         )
 
         # ── Step 2: Orders ────────────────────────────────────────────────────
-        self.stdout.write(f"📦  Processing {len(orders_csv)} order rows…")
+        self.stdout.write(f"Processing {len(orders_csv)} order rows...")
 
         # Re-fetch customers from DB to get real PKs after bulk_create
         if not dry_run:
@@ -404,7 +404,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"   ✅  Orders: {stats.orders_created} created, {stats.orders_skipped} skipped.\n"
+                f"   Orders: {stats.orders_created} created, {stats.orders_skipped} skipped.\n"
             )
         )
 
@@ -418,7 +418,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  Orders created:    {stats.orders_created}")
         self.stdout.write(f"  Orders skipped:    {stats.orders_skipped}")
         if dry_run:
-            self.stdout.write(self.style.WARNING("\n  ⚠  DRY RUN — no data was written."))
+            self.stdout.write(self.style.WARNING("\n  WARNING: DRY RUN -- no data was written."))
         self.stdout.write(self.style.SUCCESS("=" * 58))
         self.stdout.write("")
         self.stdout.write("Next steps:")

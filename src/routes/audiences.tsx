@@ -82,7 +82,7 @@ function AudienceBuilder() {
 
   // Load a sample of real customers for the preview
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({ page: 1 });
-  const previewCustomers = customersData?.results?.slice(0, 6) ?? [];
+  const previewCustomers = customersData?.slice(0, 6) ?? [];
 
   const result: AudienceBuilderResponse | null = audienceBuilder.data ?? null;
 
@@ -287,7 +287,7 @@ function AudienceBuilder() {
                         </TableCell>
                         <TableCell>{c.city || "—"}</TableCell>
                         <TableCell>
-                          <ChannelBadge channel={c.preferred_channel.charAt(0).toUpperCase() + c.preferred_channel.slice(1) as "Email" | "WhatsApp" | "SMS" | "Push"} />
+                          <ChannelBadge channel={(c.preferred_channel || "email").charAt(0).toUpperCase() + (c.preferred_channel || "email").slice(1) as "Email" | "WhatsApp" | "SMS" | "Push"} />
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {new Date(c.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "short" })}
@@ -312,7 +312,7 @@ function AudienceBuilder() {
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
                   ) : (
                     <p className="text-3xl font-semibold tabular-nums">
-                      {result ? formatNum(result.audience_size) : customersData ? formatNum(customersData.count) : "—"}
+                      {result ? formatNum(result.audience_size) : customersData ? formatNum(customersData.length) : "—"}
                     </p>
                   )}
                 </div>

@@ -28,12 +28,15 @@ class CustomerSerializer(serializers.ModelSerializer):
             "rfm_frequency",
             "rfm_monetary",
             "churn_risk",
+            "health_score",
+            "health_score_label",
             "created_at",
             "updated_at",
         ]
         read_only_fields = [
             "id", "clv", "rfm_score", "rfm_recency",
             "rfm_frequency", "rfm_monetary", "churn_risk",
+            "health_score", "health_score_label",
             "created_at", "updated_at",
         ]
 
@@ -118,13 +121,17 @@ class CampaignSerializer(serializers.ModelSerializer):
             "channel",
             "status",
             "audience_size",
-            "message",
             "segment",
             "segment_name",
+            "message",
+            "expected_outcome",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "segment_name", "created_at", "updated_at"]
+        read_only_fields = [
+            "id", "audience_size", "segment_name", "expected_outcome",
+            "created_at", "updated_at",
+        ]
 
 
 class CommunicationEventSerializer(serializers.ModelSerializer):

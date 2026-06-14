@@ -16,9 +16,9 @@ class Command(BaseCommand):
     help = "Compute RFM scores, CLV, and Churn Risk for all customers. All values in INR."
 
     def handle(self, *args, **options):
-        self.stdout.write("🧮  Computing RFM scores, CLV, and Churn Risk…")
+        self.stdout.write("Computing RFM scores, CLV, and Churn Risk...")
         engine = RFMEngine()
         updated = engine.compute_all()
         self.stdout.write(
-            self.style.SUCCESS(f"✅  Updated {updated} customers with RFM data (all amounts in INR).")
+            self.style.SUCCESS(f"Updated {updated} customers with RFM data (all amounts in INR).")
         )

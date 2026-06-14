@@ -81,44 +81,64 @@ class AudienceBuilderService:
         return self.generate_audience(validated_filters)
 
     def convert_natural_language_to_filters(self, user_input: str) -> dict[str, Any]:
-        api_key = os.environ.get("OPENAI_API_KEY")
+        api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
-            raise AudienceBuilderConfigurationError("OPENAI_API_KEY is not configured.")
+            import re
+            filters = {}
+            lower_input = user_input.lower()
+            
+            # Simple keyword matching for cities
+            if "kolkata" in lower_input:
+                filters["cities"] = ["Kolkata"]
+            elif "bangalore" in lower_input or "bengaluru" in lower_input:
+                filters["cities"] = ["Bangalore"]
+            elif "mumbai" in lower_input:
+                filters["cities"] = ["Mumbai"]
+                
+            # Regex for spend (e.g., "> 5000", "more than 5000", "spent 5000")
+            spend_match = re.search(r'(?:>|more than|over|above|spend|spent)(?:\s*(?:rs|inr|₹|rs\.?)\s*)?\s*(\d+)', lower_input)
+            if spend_match:
+                filters["min_total_spend"] = int(spend_match.group(1))
+                
+            # Regex for inactive days (e.g., "90 days", "3 months")
+            days_match = re.search(r'(\d+)\s*days?', lower_input)
+            if days_match:
+                filters["inactive_days"] = int(days_match.group(1))
+            else:
+                months_match = re.search(r'(\d+)\s*months?', lower_input)
+                if months_match:
+                    filters["inactive_days"] = int(months_match.group(1)) * 30
+                    
+            return filters
 
         try:
-            from openai import OpenAI
+            from google import genai
+            from google.genai import types
         except ImportError as exc:
             raise AudienceBuilderConfigurationError(
-                "The openai package is not installed. Install backend/requirements.txt."
+                "The google-genai package is not installed. Install backend/requirements.txt."
             ) from exc
 
-        client = OpenAI(api_key=api_key)
-        model = os.environ.get("OPENAI_AUDIENCE_MODEL", "gpt-4o-mini")
+        client = genai.Client(api_key=api_key)
+        model = os.environ.get("GEMINI_AUDIENCE_MODEL", "gemini-2.5-flash")
 
         try:
-            response = client.chat.completions.create(
+            response = client.models.generate_content(
                 model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": AUDIENCE_BUILDER_SYSTEM_PROMPT,
-                    },
-                    {
-                        "role": "user",
-                        "content": build_audience_builder_user_prompt(user_input),
-                    },
-                ],
-                response_format={"type": "json_object"},
-                temperature=0,
+                contents=f"System Instructions:\n{AUDIENCE_BUILDER_SYSTEM_PROMPT}\n\nUser Request:\n{build_audience_builder_user_prompt(user_input)}",
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.0,
+                ),
             )
         except Exception as exc:
-            raise AudienceBuilderOpenAIError("OpenAI could not parse the audience request.") from exc
+            raise AudienceBuilderOpenAIError("Gemini could not parse the audience request.") from exc
 
         try:
-            raw = response.choices[0].message.content or "{}"
+            raw = response.text or "{}"
             return json.loads(raw)
         except (AttributeError, TypeError, json.JSONDecodeError) as exc:
-            raise AudienceBuilderOpenAIError("OpenAI returned an invalid audience filter payload.") from exc
+            raise AudienceBuilderOpenAIError("Gemini returned an invalid audience filter payload.") from exc
 
     def validate_filters(self, filters: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(filters, dict):

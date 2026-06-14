@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Rocket, Pencil } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -6,75 +6,94 @@ import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChannelBadge, StatusBadge } from "@/components/status-badge";
-import { campaigns, formatNum } from "@/lib/mock-data";
+import { formatINR, formatNum } from "@/lib/mock-data";
+
+import { useCampaign, useCampaignStats, useLaunchCampaign } from "@/hooks/use-api";
 
 export const Route = createFileRoute("/campaigns/$id")({
-  loader: ({ params }) => {
-    const c = campaigns.find((x) => x.id === params.id);
-    if (!c) throw notFound();
-    return c;
-  },
-  notFoundComponent: () => (
-    <div className="p-10 text-center">
-      <p className="text-sm text-muted-foreground">Campaign not found.</p>
-      <Button asChild variant="link"><Link to="/campaigns">Back to campaigns</Link></Button>
-    </div>
-  ),
-  errorComponent: ({ error, reset }) => (
-    <div className="p-10 text-center">
-      <p className="text-sm text-muted-foreground">{error.message}</p>
-      <Button onClick={reset} variant="outline" className="mt-2">Try again</Button>
-    </div>
-  ),
   component: CampaignDetail,
 });
 
 function CampaignDetail() {
-  const c = Route.useLoaderData();
+  const params = Route.useParams();
+  const campaignId = Number(params.id);
+  const launch = useLaunchCampaign();
+  
+  const { data: c, isLoading, isError, error } = useCampaign(campaignId);
+  const { data: stats } = useCampaignStats(campaignId);
+  
+  if (isLoading) return <div className="p-10 text-center text-muted-foreground">Loading...</div>;
+  if (isError || !c) return (
+    <div className="p-10 text-center">
+      <p className="text-sm text-muted-foreground">{(error as Error)?.message || "Campaign not found."}</p>
+      <Button asChild variant="link"><Link to="/campaigns">Back to campaigns</Link></Button>
+    </div>
+  );
 
+  const details = {
+    name: c.name || "Unnamed Campaign",
+    goal: c.goal || "—",
+    status: c.status || "draft",
+    channel: c.channel || "email",
+    audience_size: c.audience_size || 0,
+    segment_name: c.segment_name || "Custom Segment",
+    created_at: c.created_at || new Date().toISOString(),
+    message: c.message || "No message defined for this campaign.",
+    expected_outcome: c.expected_outcome || null,
+  };
+
+  const isPreLaunch = details.status === "draft" || details.status === "scheduled";
+  const sentCount = isPreLaunch ? 0 : (stats?.total_communications ?? 0);
+  const by_status = stats?.by_status || {};
+  
   const funnel = [
-    { stage: "Sent", value: c.audience },
-    { stage: "Delivered", value: Math.floor(c.audience * 0.96) },
-    { stage: "Opened", value: Math.floor(c.audience * 0.58) },
-    { stage: "Clicked", value: Math.floor(c.audience * 0.24) },
-    { stage: "Converted", value: Math.floor(c.audience * (c.perf / 100 || 0.08)) },
+    { stage: "Sent", value: sentCount },
+    { stage: "Delivered", value: isPreLaunch ? 0 : (by_status["delivered"] || 0) },
+    { stage: "Opened", value: isPreLaunch ? 0 : (by_status["opened"] || 0) },
+    { stage: "Clicked", value: isPreLaunch ? 0 : (by_status["clicked"] || 0) },
+    { stage: "Converted", value: isPreLaunch ? 0 : (by_status["converted"] || 0) },
   ];
+  
+  const conversionRate = sentCount > 0 ? (((by_status["clicked"] || 0) / sentCount) * 100).toFixed(1) : "0.0";
 
   return (
     <div className="flex min-h-screen flex-col">
       <Topbar
-        title={c.name}
-        description={`${c.channel} campaign · created ${c.created}`}
+        title={details.name}
+        description={`${details.channel.charAt(0).toUpperCase() + details.channel.slice(1)} campaign · created ${new Date(details.created_at).toLocaleDateString()}`}
         actions={
           <>
             <Button asChild variant="ghost" size="sm" className="gap-1.5">
               <Link to="/campaigns"><ArrowLeft className="h-4 w-4" /> Back</Link>
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5"><Pencil className="h-4 w-4" /> Edit</Button>
-            <Button size="sm" className="gap-1.5"><Rocket className="h-4 w-4" /> Relaunch</Button>
+            {isPreLaunch && (
+                <Button size="sm" className="gap-1.5" onClick={() => launch.mutate(c.id)} disabled={launch.isPending}>
+                  <Rocket className="h-4 w-4" /> {launch.isPending ? "Launching..." : "Launch"}
+                </Button>
+            )}
           </>
         }
       />
       <main className="flex-1 space-y-6 p-4 md:p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge status={c.status} />
-          <ChannelBadge channel={c.channel} />
-          <span className="text-xs text-muted-foreground">Audience: {formatNum(c.audience)} customers</span>
+          <StatusBadge status={details.status.charAt(0).toUpperCase() + details.status.slice(1) as any} />
+          <ChannelBadge channel={details.channel.charAt(0).toUpperCase() + details.channel.slice(1) as any} />
+          <span className="text-xs text-muted-foreground">Audience: {formatNum(details.audience_size)} customers</span>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Message preview</CardTitle>
-              <CardDescription>How customers will see this on {c.channel}.</CardDescription>
+              <CardDescription>How customers will see this on {details.channel}.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="mx-auto max-w-md rounded-2xl border bg-muted/30 p-4">
                 <div className="rounded-xl bg-background p-4 shadow-sm">
                   <p className="text-sm font-medium">Acme Coffee</p>
-                  <p className="mt-2 text-sm leading-relaxed">
-                    Hi Aarav, we miss you ☕ Here's 15% off your favourite Ethiopian Yirgacheffe — just for you,
-                    valid until Sunday.
+                  <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
+                    {details.message}
                   </p>
                   <Button size="sm" className="mt-3 w-full">Reorder now</Button>
                 </div>
@@ -87,10 +106,10 @@ function CampaignDetail() {
               <CardTitle>Audience summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <Row label="Total recipients" value={formatNum(c.audience)} />
-              <Row label="Channel" value={<ChannelBadge channel={c.channel} />} />
-              <Row label="Segment" value="Dormant Premium Buyers" />
-              <Row label="Tags" value="loyalty, win-back" />
+              <Row label="Total recipients" value={formatNum(details.audience_size)} />
+              <Row label="Channel" value={<ChannelBadge channel={details.channel.charAt(0).toUpperCase() + details.channel.slice(1) as any} />} />
+              <Row label="Segment" value={details.segment_name} />
+              <Row label="Goal" value={details.goal} />
             </CardContent>
           </Card>
         </div>
@@ -106,7 +125,7 @@ function CampaignDetail() {
               <Stat label="Opened" value={formatNum(funnel[2].value)} />
               <Stat label="Clicked" value={formatNum(funnel[3].value)} />
               <Stat label="Converted" value={formatNum(funnel[4].value)} accent />
-              <Stat label="Conversion %" value={`${c.perf || 8.2}%`} accent />
+              <Stat label="Conversion %" value={`${conversionRate}%`} accent />
             </CardContent>
           </Card>
 
@@ -128,6 +147,36 @@ function CampaignDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {details.expected_outcome && (
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Predicted Outcome</CardTitle>
+                <CardDescription>Generated before campaign launch.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-3">
+                <Stat label="Est. Reach" value={formatNum(details.expected_outcome?.estimated_reach ?? 0)} />
+                <Stat label="Expected Engagement" value={`${details.expected_outcome?.expected_engagement_rate ?? 0}%`} />
+                <Stat label="Expected Conversion" value={`${details.expected_outcome?.expected_conversion_rate ?? 0}%`} />
+                <Stat label="Expected Revenue" value={formatINR(details.expected_outcome?.expected_revenue ?? 0)} accent />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Actual Performance</CardTitle>
+                <CardDescription>Live revenue attribution.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col justify-center h-full pb-8">
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-6 text-center">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Live Revenue Influenced</p>
+                  <p className="text-3xl font-bold tabular-nums text-primary">{formatINR((funnel[4]?.value ?? 0) * 4500)}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Estimated based on conversions * average order value.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );

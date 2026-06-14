@@ -22,10 +22,13 @@ router.register(r"campaigns", CampaignViewSet, basename="campaign")
 router.register(r"communications", CommunicationViewSet, basename="communication")
 router.register(r"events", CommunicationEventViewSet, basename="event")
 
+from apps.crm.analytics_views import AnalyticsChartsView
+
 urlpatterns = [
+    path("communications/receipts/", CommunicationReceiptView.as_view(), name="communication-receipts"),
     path("", include(router.urls)),
     path("stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
+    path("analytics/charts/", AnalyticsChartsView.as_view(), name="analytics-charts"),
     path("ai/audience-builder/", AudienceBuilderView.as_view(), name="ai-audience-builder"),
     path("ai/campaign-copilot/", CampaignCopilotView.as_view(), name="ai-campaign-copilot"),
-    path("communications/receipts/", CommunicationReceiptView.as_view(), name="communication-receipts"),
 ]

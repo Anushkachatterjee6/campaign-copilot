@@ -10,12 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as CopilotRouteImport } from './routes/copilot'
-import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AudiencesRouteImport } from './routes/audiences'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CustomersIndexRouteImport } from './routes/customers.index'
+import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
 import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 import { Route as CampaignsIdRouteImport } from './routes/campaigns.$id'
 
@@ -24,19 +24,9 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CustomersRoute = CustomersRouteImport.update({
-  id: '/customers',
-  path: '/customers',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CopilotRoute = CopilotRouteImport.update({
   id: '/copilot',
   path: '/copilot',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CampaignsRoute = CampaignsRouteImport.update({
-  id: '/campaigns',
-  path: '/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AudiencesRoute = AudiencesRouteImport.update({
@@ -54,50 +44,60 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomersIndexRoute = CustomersIndexRouteImport.update({
+  id: '/customers/',
+  path: '/customers/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
+  id: '/campaigns/',
+  path: '/campaigns/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CustomersIdRoute = CustomersIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => CustomersRoute,
+  id: '/customers/$id',
+  path: '/customers/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CampaignsIdRoute = CampaignsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => CampaignsRoute,
+  id: '/campaigns/$id',
+  path: '/campaigns/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/audiences': typeof AudiencesRoute
-  '/campaigns': typeof CampaignsRouteWithChildren
   '/copilot': typeof CopilotRoute
-  '/customers': typeof CustomersRouteWithChildren
   '/settings': typeof SettingsRoute
   '/campaigns/$id': typeof CampaignsIdRoute
   '/customers/$id': typeof CustomersIdRoute
+  '/campaigns/': typeof CampaignsIndexRoute
+  '/customers/': typeof CustomersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/audiences': typeof AudiencesRoute
-  '/campaigns': typeof CampaignsRouteWithChildren
   '/copilot': typeof CopilotRoute
-  '/customers': typeof CustomersRouteWithChildren
   '/settings': typeof SettingsRoute
   '/campaigns/$id': typeof CampaignsIdRoute
   '/customers/$id': typeof CustomersIdRoute
+  '/campaigns': typeof CampaignsIndexRoute
+  '/customers': typeof CustomersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/audiences': typeof AudiencesRoute
-  '/campaigns': typeof CampaignsRouteWithChildren
   '/copilot': typeof CopilotRoute
-  '/customers': typeof CustomersRouteWithChildren
   '/settings': typeof SettingsRoute
   '/campaigns/$id': typeof CampaignsIdRoute
   '/customers/$id': typeof CustomersIdRoute
+  '/campaigns/': typeof CampaignsIndexRoute
+  '/customers/': typeof CustomersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -105,44 +105,46 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/audiences'
-    | '/campaigns'
     | '/copilot'
-    | '/customers'
     | '/settings'
     | '/campaigns/$id'
     | '/customers/$id'
+    | '/campaigns/'
+    | '/customers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/analytics'
     | '/audiences'
-    | '/campaigns'
     | '/copilot'
-    | '/customers'
     | '/settings'
     | '/campaigns/$id'
     | '/customers/$id'
+    | '/campaigns'
+    | '/customers'
   id:
     | '__root__'
     | '/'
     | '/analytics'
     | '/audiences'
-    | '/campaigns'
     | '/copilot'
-    | '/customers'
     | '/settings'
     | '/campaigns/$id'
     | '/customers/$id'
+    | '/campaigns/'
+    | '/customers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalyticsRoute: typeof AnalyticsRoute
   AudiencesRoute: typeof AudiencesRoute
-  CampaignsRoute: typeof CampaignsRouteWithChildren
   CopilotRoute: typeof CopilotRoute
-  CustomersRoute: typeof CustomersRouteWithChildren
   SettingsRoute: typeof SettingsRoute
+  CampaignsIdRoute: typeof CampaignsIdRoute
+  CustomersIdRoute: typeof CustomersIdRoute
+  CampaignsIndexRoute: typeof CampaignsIndexRoute
+  CustomersIndexRoute: typeof CustomersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -154,25 +156,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/customers': {
-      id: '/customers'
-      path: '/customers'
-      fullPath: '/customers'
-      preLoaderRoute: typeof CustomersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/copilot': {
       id: '/copilot'
       path: '/copilot'
       fullPath: '/copilot'
       preLoaderRoute: typeof CopilotRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/campaigns': {
-      id: '/campaigns'
-      path: '/campaigns'
-      fullPath: '/campaigns'
-      preLoaderRoute: typeof CampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audiences': {
@@ -196,55 +184,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/customers/': {
+      id: '/customers/'
+      path: '/customers'
+      fullPath: '/customers/'
+      preLoaderRoute: typeof CustomersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaigns/': {
+      id: '/campaigns/'
+      path: '/campaigns'
+      fullPath: '/campaigns/'
+      preLoaderRoute: typeof CampaignsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/customers/$id': {
       id: '/customers/$id'
-      path: '/$id'
+      path: '/customers/$id'
       fullPath: '/customers/$id'
       preLoaderRoute: typeof CustomersIdRouteImport
-      parentRoute: typeof CustomersRoute
+      parentRoute: typeof rootRouteImport
     }
     '/campaigns/$id': {
       id: '/campaigns/$id'
-      path: '/$id'
+      path: '/campaigns/$id'
       fullPath: '/campaigns/$id'
       preLoaderRoute: typeof CampaignsIdRouteImport
-      parentRoute: typeof CampaignsRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface CampaignsRouteChildren {
-  CampaignsIdRoute: typeof CampaignsIdRoute
-}
-
-const CampaignsRouteChildren: CampaignsRouteChildren = {
-  CampaignsIdRoute: CampaignsIdRoute,
-}
-
-const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
-  CampaignsRouteChildren,
-)
-
-interface CustomersRouteChildren {
-  CustomersIdRoute: typeof CustomersIdRoute
-}
-
-const CustomersRouteChildren: CustomersRouteChildren = {
-  CustomersIdRoute: CustomersIdRoute,
-}
-
-const CustomersRouteWithChildren = CustomersRoute._addFileChildren(
-  CustomersRouteChildren,
-)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalyticsRoute: AnalyticsRoute,
   AudiencesRoute: AudiencesRoute,
-  CampaignsRoute: CampaignsRouteWithChildren,
   CopilotRoute: CopilotRoute,
-  CustomersRoute: CustomersRouteWithChildren,
   SettingsRoute: SettingsRoute,
+  CampaignsIdRoute: CampaignsIdRoute,
+  CustomersIdRoute: CustomersIdRoute,
+  CampaignsIndexRoute: CampaignsIndexRoute,
+  CustomersIndexRoute: CustomersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

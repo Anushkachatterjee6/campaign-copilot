@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, MoreHorizontal, Eye, Pencil, Rocket, Loader2, AlertCircle } from "lucide-react";
 
@@ -22,7 +22,7 @@ const STATUS_TABS: { label: string; value: string }[] = [
   { label: "Draft", value: "draft" },
 ];
 
-export const Route = createFileRoute("/campaigns")({
+export const Route = createFileRoute("/campaigns/")({
   head: () => ({
     meta: [
       { title: "Campaigns — Campaign Copilot" },
@@ -36,6 +36,7 @@ function Campaigns() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const launch = useLaunchCampaign();
+  const navigate = useNavigate();
 
   const { data, isLoading, isError, error } = useCampaigns({
     search: search || undefined,
@@ -43,7 +44,7 @@ function Campaigns() {
     ordering: "-created_at",
   });
 
-  const campaigns = data?.results ?? [];
+  const campaigns = data ?? [];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -51,7 +52,11 @@ function Campaigns() {
         title="Campaigns"
         description="Manage active, scheduled and completed campaigns."
         actions={
-          <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> New campaign</Button>
+          <Button asChild size="sm" className="gap-1.5">
+            <Link to="/copilot">
+              <Plus className="h-4 w-4" /> New campaign
+            </Link>
+          </Button>
         }
       />
       <main className="flex-1 space-y-4 p-4 md:p-6">
@@ -105,21 +110,25 @@ function Campaigns() {
                     </TableRow>
                   ) : (
                     campaigns.map((c) => (
-                      <TableRow key={c.id} className="cursor-pointer">
+                      <TableRow 
+                        key={c.id} 
+                        className="cursor-pointer"
+                        onClick={() => navigate({ to: '/campaigns/$id', params: { id: String(c.id) } })}
+                      >
                         <TableCell>
                           <Link to="/campaigns/$id" params={{ id: String(c.id) }} className="font-medium hover:underline">
                             {c.name}
                           </Link>
-                          {c.goal && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[240px]">{c.goal}</p>
-                          )}
+                          <p className="text-xs text-muted-foreground">
+                            #{c.id}{c.goal && c.goal !== c.name ? ` · ${c.goal}` : ""}
+                          </p>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{formatNum(c.audience_size)}</TableCell>
                         <TableCell>
-                          <ChannelBadge channel={c.channel.charAt(0).toUpperCase() + c.channel.slice(1) as "Email" | "WhatsApp" | "SMS" | "Push"} />
+                          <ChannelBadge channel={(c.channel || "email").charAt(0).toUpperCase() + (c.channel || "email").slice(1) as "Email" | "WhatsApp" | "SMS" | "Push"} />
                         </TableCell>
                         <TableCell>
-                          <StatusBadge status={c.status.charAt(0).toUpperCase() + c.status.slice(1) as "Draft" | "Scheduled" | "Active" | "Completed" | "Paused"} />
+                          <StatusBadge status={(c.status || "draft").charAt(0).toUpperCase() + (c.status || "draft").slice(1) as "Draft" | "Scheduled" | "Active" | "Completed" | "Paused"} />
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {new Date(c.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })}
@@ -127,11 +136,11 @@ function Campaigns() {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                               <DropdownMenuItem asChild>
                                 <Link to="/campaigns/$id" params={{ id: String(c.id) }}>
                                   <Eye className="mr-2 h-3.5 w-3.5" /> View
@@ -160,7 +169,7 @@ function Campaigns() {
 
         {data && (
           <p className="text-right text-xs text-muted-foreground">
-            {data.count} campaign{data.count !== 1 ? "s" : ""}
+            {data.length} campaign{data.length !== 1 ? "s" : ""}
           </p>
         )}
       </main>
