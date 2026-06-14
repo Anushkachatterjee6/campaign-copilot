@@ -1,4 +1,4 @@
-name: Deploy backend to HuggingFace Spaces
+﻿name: Deploy backend to HuggingFace Spaces
 
 # Triggers: any push to master/main that touches the backend OR this workflow
 on:
@@ -149,5 +149,3 @@ jobs:
           print(f"API URL: {api_url}")
           PY
 
-          echo "Deployed to: https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE}"
-          echo "API URL:     ${HF_API_URL}"
