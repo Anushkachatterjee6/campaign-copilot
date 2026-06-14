@@ -44,7 +44,7 @@ jobs:
         env:
           HF_TOKEN:      ${{ secrets.HF_TOKEN }}
           HF_USERNAME:   ${{ secrets.HF_USERNAME }}
-          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE }}
         run: |
           git config --global user.email "github-actions@github.com"
           git config --global user.name  "GitHub Actions"

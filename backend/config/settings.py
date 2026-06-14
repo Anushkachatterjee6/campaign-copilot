@@ -12,9 +12,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
 
-# Accept localhost for dev + any onrender.com host + any explicitly listed host
+# Accept localhost for dev + any onrender.com host + any hf.space host + any explicitly listed host
 _extra_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "")
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com"] + (
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com", ".hf.space"] + (
     [h.strip() for h in _extra_hosts.split(",") if h.strip()]
 )
 
