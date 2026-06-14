@@ -44,21 +44,25 @@ jobs:
         env:
           HF_TOKEN:      ${{ secrets.HF_TOKEN }}
           HF_USERNAME:   ${{ secrets.HF_USERNAME }}
-          HF_SPACE_NAME: ${{ secrets.HF_SPACE }}
+          HF_SPACE:      ${{ secrets.HF_SPACE }}
         run: |
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name  "GitHub Actions"
-
-          cd hf_deploy
-          git init -b main
+          echo "Cloning Hugging Face Space..."
+          git clone https://user:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE hf_repo
+          
+          echo "Copying files to repo..."
+          # Remove existing files except .git
+          find hf_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          cp -a hf_deploy/. hf_repo/
+          
+          cd hf_repo
+          git config user.email "github-actions@github.com"
+          git config user.name  "GitHub Actions"
+          
           git add --all
-          COMMIT_SHA=$(git -C .. rev-parse --short HEAD)
-          git commit -m "Deploy $(date -u +'%Y-%m-%d %H:%M UTC') (${COMMIT_SHA})"
-
-          git push --force \
-            "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE_NAME}" \
-            main
-
-          echo ""
-          echo "✅ Deployed to: https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE_NAME}"
-          echo "🌐 API URL:     https://${HF_USERNAME}-${HF_SPACE_NAME}.hf.space"
+          git commit -m "Deploy $(date -u +'%Y-%m-%d %H:%M UTC')" || echo "No changes to commit"
+          
+          echo "Pushing to Hugging Face..."
+          git push
+          
+          echo "✅ Deployed to: https://huggingface.co/spaces/$HF_USERNAME/$HF_SPACE"
+          echo "🌐 API URL:     https://$HF_USERNAME-$HF_SPACE.hf.space"
