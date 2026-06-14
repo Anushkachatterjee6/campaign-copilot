@@ -20,22 +20,17 @@ jobs:
 
       - name: Validate HuggingFace secrets
         env:
-          HF_TOKEN:    ${{ secrets.HF_TOKEN }}
-          HF_USERNAME: ${{ secrets.HF_USERNAME }}
-          HF_SPACE:    ${{ secrets.HF_SPACE }}
+          HF_TOKEN:      ${{ secrets.HF_TOKEN }}
+          HF_SPACE:      ${{ secrets.HF_SPACE }}
           HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
         run: |
-          if [ -z "$HF_TOKEN" ] || [ -z "$HF_USERNAME" ]; then
-            echo "::error::Missing HF_TOKEN or HF_USERNAME repository secrets."
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::Missing HF_TOKEN repository secret."
             exit 1
           fi
-          if [ -z "$HF_SPACE" ] && [ -z "$HF_SPACE_NAME" ]; then
-            echo "::error::Missing HF_SPACE (or HF_SPACE_NAME) repository secret."
-            exit 1
-          fi
-          SPACE="${HF_SPACE:-$HF_SPACE_NAME}"
+          SPACE="${HF_SPACE:-${HF_SPACE_NAME:-campaign-copilot-api}}"
           echo "HF_SPACE=$SPACE" >> "$GITHUB_ENV"
-          echo "Deploying to https://huggingface.co/spaces/${HF_USERNAME}/${SPACE}"
+          echo "Target Space: ${SPACE}"
 
       - name: Prepare HuggingFace deployment bundle
         run: |
@@ -68,8 +63,7 @@ jobs:
 
       - name: Push to HuggingFace Space
         env:
-          HF_TOKEN:    ${{ secrets.HF_TOKEN }}
-          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -79,24 +73,53 @@ jobs:
           python <<'PY'
           import os
           import sys
-          from huggingface_hub import HfApi
 
-          username = os.environ["HF_USERNAME"]
-          space = os.environ["HF_SPACE"]
+          from huggingface_hub import HfApi
+          from huggingface_hub.utils import HfHubHTTPError
+
           token = os.environ["HF_TOKEN"]
-          repo_id = f"{username}/{space}"
+          space = os.environ.get("HF_SPACE", "campaign-copilot-api")
           sha = os.environ.get("GITHUB_SHA", "")[:7]
 
           api = HfApi(token=token)
+
+          try:
+              whoami = api.whoami()
+          except Exception as exc:
+              print(f"::error::HF_TOKEN is invalid or expired: {exc}")
+              sys.exit(1)
+
+          username = whoami.get("name") or whoami.get("fullname")
+          if not username:
+              print("::error::Could not resolve Hugging Face username from token.")
+              sys.exit(1)
+
+          repo_id = f"{username}/{space}"
+          print(f"Token owner: {username}")
           print(f"Uploading bundle to spaces/{repo_id} ...")
-          api.upload_folder(
-              folder_path="hf_deploy",
-              repo_id=repo_id,
-              repo_type="space",
-              commit_message=f"Deploy {sha}" if sha else "Deploy from GitHub Actions",
-          )
+
+          try:
+              api.upload_folder(
+                  folder_path="hf_deploy",
+                  repo_id=repo_id,
+                  repo_type="space",
+                  commit_message=f"Deploy {sha}" if sha else "Deploy from GitHub Actions",
+              )
+          except HfHubHTTPError as exc:
+              print(f"::error::Upload failed ({exc.response.status_code}): {exc}")
+              sys.exit(1)
+          except Exception as exc:
+              print(f"::error::Upload failed: {type(exc).__name__}: {exc}")
+              sys.exit(1)
+
+          api_url = f"https://{username}-{space}.hf.space"
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"HF_USERNAME={username}\n")
+              env_file.write(f"HF_API_URL={api_url}\n")
+
           print(f"Deployed to https://huggingface.co/spaces/{repo_id}")
+          print(f"API URL: {api_url}")
           PY
 
-          echo "✅ Deployed to: https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE}"
-          echo "🌐 API URL:     https://${HF_USERNAME}-${HF_SPACE}.hf.space"
+          echo "Deployed to: https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE}"
+          echo "API URL:     ${HF_API_URL}"
