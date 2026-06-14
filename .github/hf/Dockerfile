@@ -1,19 +1,22 @@
 # HuggingFace Spaces Dockerfile
-# Used by GitHub Actions (.github/workflows/deploy-hf.yml) to deploy the backend.
-# HF Spaces requires the app to listen on port 7860.
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-# HuggingFace Spaces injects PORT=7860; start.sh reads ${PORT:-7860}
 ENV PORT=7860
 
-WORKDIR /app
+# Hugging Face Spaces require running as a non-root user with UID 1000
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
 
-COPY requirements.txt .
+WORKDIR $HOME/app
+
+COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY --chown=user . .
 
 # Collect static files at build time (no DB needed for this step)
 RUN python manage.py collectstatic --noinput
