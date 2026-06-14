@@ -113,21 +113,21 @@ function Dashboard() {
                 <AreaChart data={campaignTrend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(217 91% 60%)" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="hsl(217 91% 60%)" stopOpacity={0} />
+                      <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(160 84% 39%)" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="hsl(160 84% 39%)" stopOpacity={0} />
+                      <stop offset="0%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Area type="monotone" dataKey="sent" stroke="hsl(217 91% 60%)" strokeWidth={2} fill="url(#g1)" />
-                  <Area type="monotone" dataKey="opened" stroke="hsl(160 84% 39%)" strokeWidth={2} fill="url(#g2)" />
-                  <Line type="monotone" dataKey="converted" stroke="hsl(280 80% 60%)" strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="sent" stroke="hsl(217, 91%, 60%)" strokeWidth={2} fill="url(#g1)" />
+                  <Area type="monotone" dataKey="opened" stroke="hsl(160, 84%, 39%)" strokeWidth={2} fill="url(#g2)" />
+                  <Line type="monotone" dataKey="converted" stroke="hsl(280, 80%, 60%)" strokeWidth={2} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
@@ -145,8 +145,8 @@ function Dashboard() {
                   <XAxis dataKey="channel" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="engagement" fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="conversion" fill="hsl(280 80% 60%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="engagement" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="conversion" fill="hsl(280, 80%, 60%)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -166,8 +166,8 @@ function Dashboard() {
                   <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Line type="monotone" dataKey="active" stroke="hsl(217 91% 60%)" strokeWidth={2.5} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="new" stroke="hsl(160 84% 39%)" strokeWidth={2.5} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="active" stroke="hsl(217, 91%, 60%)" strokeWidth={2.5} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="new" stroke="hsl(160, 84%, 39%)" strokeWidth={2.5} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -221,8 +221,8 @@ function Dashboard() {
                 {liveCampaigns.map((c) => {
                   // Handle both live Campaign objects and mock recentCampaigns
                   const id = typeof c.id === "number" ? c.id : c.id;
-                  const channel = (c as {channel: string}).channel;
-                  const status = (c as {status: string}).status;
+                  const channel = (c as {channel?: string}).channel || "email";
+                  const status = (c as {status?: string}).status || "draft";
                   const channelDisplay = channel.charAt(0).toUpperCase() + channel.slice(1);
                   const statusDisplay = status.charAt(0).toUpperCase() + status.slice(1);
                   const perf = (c as {perf?: number}).perf;

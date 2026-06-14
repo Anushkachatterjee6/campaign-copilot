@@ -35,7 +35,7 @@ export const Route = createFileRoute("/analytics")({
   component: Analytics,
 });
 
-const COLORS = ["hsl(217 91% 60%)", "hsl(160 84% 39%)", "hsl(38 92% 50%)", "hsl(280 80% 60%)"];
+const COLORS = ["hsl(217, 91%, 60%)", "hsl(160, 84%, 39%)", "hsl(38, 92%, 50%)", "hsl(280, 80%, 60%)"];
 
 function Analytics() {
   const { data: analytics, isLoading } = useAnalyticsCharts();
