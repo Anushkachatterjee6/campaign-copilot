@@ -144,5 +144,5 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ] + ([_frontend_url] if _frontend_url else [])
 
-# Also allow all origins if explicitly set (useful for previews/staging)
-CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL", "false").lower() == "true"
+# Also allow all origins to prevent CORS errors from Vercel
+CORS_ALLOW_ALL_ORIGINS = True
