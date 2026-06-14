@@ -46,23 +46,12 @@ jobs:
           HF_USERNAME:   ${{ secrets.HF_USERNAME }}
           HF_SPACE:      ${{ secrets.HF_SPACE }}
         run: |
-          echo "Cloning Hugging Face Space..."
-          git clone https://user:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE hf_repo
+          echo "Installing huggingface_hub..."
+          python -m pip install --upgrade pip
+          pip install huggingface_hub
           
-          echo "Copying files to repo..."
-          # Remove existing files except .git
-          find hf_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-          cp -a hf_deploy/. hf_repo/
-          
-          cd hf_repo
-          git config user.email "github-actions@github.com"
-          git config user.name  "GitHub Actions"
-          
-          git add --all
-          git commit -m "Deploy $(date -u +'%Y-%m-%d %H:%M UTC')" || echo "No changes to commit"
-          
-          echo "Pushing to Hugging Face..."
-          git push
+          echo "Uploading files to Hugging Face Space..."
+          huggingface-cli upload ${HF_USERNAME}/${HF_SPACE} ./hf_deploy / --repo-type space --token ${HF_TOKEN}
           
           echo "✅ Deployed to: https://huggingface.co/spaces/$HF_USERNAME/$HF_SPACE"
           echo "🌐 API URL:     https://$HF_USERNAME-$HF_SPACE.hf.space"
