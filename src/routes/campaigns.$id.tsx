@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Rocket, Pencil } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Rocket, Pencil, Trash2 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useState } from "react";
 
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,7 +9,17 @@ import { Button } from "@/components/ui/button";
 import { ChannelBadge, StatusBadge } from "@/components/status-badge";
 import { formatINR, formatNum } from "@/lib/mock-data";
 
-import { useCampaign, useCampaignStats, useLaunchCampaign } from "@/hooks/use-api";
+import { useCampaign, useCampaignStats, useLaunchCampaign, useDeleteCampaign } from "@/hooks/use-api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/campaigns/$id")({
   component: CampaignDetail,
@@ -18,6 +29,9 @@ function CampaignDetail() {
   const params = Route.useParams();
   const campaignId = Number(params.id);
   const launch = useLaunchCampaign();
+  const deleteCampaign = useDeleteCampaign();
+  const navigate = useNavigate();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const { data: c, isLoading, isError, error } = useCampaign(campaignId);
   const { data: stats } = useCampaignStats(campaignId);
@@ -72,6 +86,14 @@ function CampaignDetail() {
                   <Rocket className="h-4 w-4" /> {launch.isPending ? "Launching..." : "Launch"}
                 </Button>
             )}
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
           </>
         }
       />
@@ -177,6 +199,34 @@ function CampaignDetail() {
             </Card>
           </div>
         )}
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the campaign "{details.name}" and all of its communications data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                onClick={() => {
+                  deleteCampaign.mutate(campaignId, {
+                    onSuccess: () => {
+                      setShowDeleteDialog(false);
+                      navigate({ to: "/campaigns" });
+                    },
+                  });
+                }}
+                disabled={deleteCampaign.isPending}
+              >
+                {deleteCampaign.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );

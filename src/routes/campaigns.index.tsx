@@ -1,17 +1,27 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, MoreHorizontal, Eye, Pencil, Rocket, Loader2, AlertCircle } from "lucide-react";
+import { Plus, MoreHorizontal, Eye, Pencil, Rocket, Loader2, AlertCircle, Trash2 } from "lucide-react";
 
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ChannelBadge, StatusBadge } from "@/components/status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatNum } from "@/lib/mock-data";
-import { useCampaigns, useLaunchCampaign } from "@/hooks/use-api";
+import { useCampaigns, useDeleteCampaign, useLaunchCampaign } from "@/hooks/use-api";
 import type { CampaignStatus } from "@/lib/api/types";
 
 const STATUS_TABS: { label: string; value: string }[] = [
@@ -37,6 +47,8 @@ function Campaigns() {
   const [statusFilter, setStatusFilter] = useState("all");
   const launch = useLaunchCampaign();
   const navigate = useNavigate();
+  const deleteCampaign = useDeleteCampaign();
+  const [campaignToDelete, setCampaignToDelete] = useState<number | null>(null);
 
   const { data, isLoading, isError, error } = useCampaigns({
     search: search || undefined,
@@ -155,6 +167,16 @@ function Campaigns() {
                                   <Rocket className="mr-2 h-3.5 w-3.5" /> Launch
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCampaignToDelete(c.id);
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -172,6 +194,33 @@ function Campaigns() {
             {data.length} campaign{data.length !== 1 ? "s" : ""}
           </p>
         )}
+
+        <AlertDialog open={campaignToDelete !== null} onOpenChange={(open) => !open && setCampaignToDelete(null)}>
+          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the campaign and all of its communication logs.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCampaignToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                onClick={() => {
+                  if (campaignToDelete !== null) {
+                    deleteCampaign.mutate(campaignToDelete, {
+                      onSuccess: () => setCampaignToDelete(null),
+                    });
+                  }
+                }}
+                disabled={deleteCampaign.isPending}
+              >
+                {deleteCampaign.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
