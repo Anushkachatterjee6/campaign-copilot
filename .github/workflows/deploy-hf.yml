@@ -13,18 +13,35 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate HuggingFace secrets
+        env:
+          HF_TOKEN:    ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          HF_SPACE:    ${{ secrets.HF_SPACE }}
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+        run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_USERNAME" ]; then
+            echo "::error::Missing HF_TOKEN or HF_USERNAME repository secrets."
+            exit 1
+          fi
+          if [ -z "$HF_SPACE" ] && [ -z "$HF_SPACE_NAME" ]; then
+            echo "::error::Missing HF_SPACE (or HF_SPACE_NAME) repository secret."
+            exit 1
+          fi
+          SPACE="${HF_SPACE:-$HF_SPACE_NAME}"
+          echo "HF_SPACE=$SPACE" >> "$GITHUB_ENV"
+          echo "Deploying to https://huggingface.co/spaces/${HF_USERNAME}/${SPACE}"
+
       - name: Prepare HuggingFace deployment bundle
         run: |
           mkdir -p hf_deploy
 
-          # Copy all backend source (exclude dev-only files)
+          # Copy backend source into the Space repo root (exclude dev-only files)
           rsync -av \
             --exclude '__pycache__' \
             --exclude '*.pyc' \
@@ -33,37 +50,49 @@ jobs:
             --exclude 'db.sqlite3' \
             --exclude 'staticfiles/' \
             --exclude '.pytest_cache/' \
+            --exclude 'Dockerfile' \
             backend/ hf_deploy/
 
-          # Replace with HF-specific Dockerfile and README
+          # HF-specific Dockerfile and README (README frontmatter sets sdk: docker)
           cp .github/hf/Dockerfile hf_deploy/Dockerfile
-          cp .github/hf/README.md  hf_deploy/README.md
+          cp .github/hf/README.md hf_deploy/README.md
 
           echo "--- Files to be deployed ---"
           find hf_deploy -type f | sort
 
+          test -f hf_deploy/manage.py
+          test -f hf_deploy/requirements.txt
+          test -f hf_deploy/start.sh
+          test -f hf_deploy/Dockerfile
+          test -f hf_deploy/README.md
+
       - name: Push to HuggingFace Space
         env:
-          HF_TOKEN:      ${{ secrets.HF_TOKEN }}
-          HF_USERNAME:   ${{ secrets.HF_USERNAME }}
-          HF_SPACE:      ${{ secrets.HF_SPACE }}
+          HF_TOKEN:    ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
         run: |
-          echo "Installing huggingface_hub..."
-          python -m pip install --upgrade pip
-          pip install huggingface_hub
-          
-          echo "Uploading files to Hugging Face Space..."
-          huggingface-cli upload "${HF_USERNAME}/${HF_SPACE}" ./hf_deploy / --repo-type space --token "${HF_TOKEN}" > hf_upload_log.txt 2>&1 || {
-             echo "Upload failed! Committing log to master..."
-             git checkout master
-             git pull origin master
-             mv hf_upload_log.txt HF_ERROR.log
-             git add HF_ERROR.log
-             git config user.email "github-actions@github.com"
-             git config user.name "GitHub Actions"
-             git commit -m "chore: save deployment error [skip ci]"
-             git push origin master
-             exit 1
-          }
-          
-          echo "✅ Deployed to: https://huggingface.co/spaces/$HF_USERNAME/$HF_SPACE"
+          set -euo pipefail
+
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+          echo "Cloning Hugging Face Space..."
+          git clone "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE}" hf_repo
+
+          echo "Syncing deployment bundle into Space repository..."
+          find hf_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          cp -a hf_deploy/. hf_repo/
+
+          cd hf_repo
+          git add --all
+          if git diff --staged --quiet; then
+            echo "No file changes detected — skipping commit."
+          else
+            git commit -m "Deploy $(date -u +'%Y-%m-%d %H:%M UTC') (${GITHUB_SHA::7})"
+          fi
+
+          echo "Pushing to Hugging Face..."
+          git push origin HEAD:main
+
+          echo "✅ Deployed to: https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE}"
+          echo "🌐 API URL:     https://${HF_USERNAME}-${HF_SPACE}.hf.space"
