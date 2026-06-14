@@ -21,5 +21,9 @@ else:
     print(f'Database already has {count} customers — skipping seed.')
 "
 
+echo "==> Seeding campaigns and analytics data (idempotent)..."
+python manage.py seed_campaigns
+
 echo "==> Starting daphne ASGI server on port ${PORT:-7860}..."
 exec daphne -b 0.0.0.0 -p "${PORT:-7860}" config.asgi:application
+
