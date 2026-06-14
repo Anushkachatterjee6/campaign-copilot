@@ -20,6 +20,7 @@ import {
   Sparkles,
   TrendingUp,
   ArrowRight,
+  AlertCircle,
 } from "lucide-react";
 
 import { Topbar } from "@/components/topbar";
@@ -50,8 +51,8 @@ const tooltipStyle = {
 };
 
 function Dashboard() {
-  const { data: liveStats } = useDashboardStats();
-  const { data: analytics } = useAnalyticsCharts();
+  const { data: liveStats, isError: isStatsError, error: statsError } = useDashboardStats();
+  const { data: analytics, isError: isAnalyticsError, error: analyticsError } = useAnalyticsCharts();
 
   const totalCustomers = liveStats?.total_customers ?? null;
   const totalOrders = liveStats?.total_orders ?? null;
@@ -82,6 +83,21 @@ function Dashboard() {
       />
 
       <main className="flex-1 space-y-6 p-4 md:p-6">
+        {(isStatsError || isAnalyticsError) && (
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+            <p className="font-semibold flex items-center gap-2 mb-1">
+              <AlertCircle className="h-4 w-4" />
+              API Connection Failed
+            </p>
+            <p className="opacity-90">
+              The dashboard failed to load data from the backend. If you are on Vercel, ensure that <strong>VITE_API_BASE_URL</strong> is correctly set in your environment variables.
+            </p>
+            <p className="mt-2 text-xs font-mono opacity-70">
+              Error details: {(statsError as Error)?.message || (analyticsError as Error)?.message}
+            </p>
+          </div>
+        )}
+
         {/* Stat cards */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label="Total Customers" value={totalCustomers !== null ? formatNum(totalCustomers) : "…"} delta={4.2} icon={Users} />
