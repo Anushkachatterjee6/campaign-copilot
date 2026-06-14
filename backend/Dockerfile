@@ -10,10 +10,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Collect static files so WhiteNoise can serve them
+# Collect static files (no DB required — WhiteNoise serves them)
 RUN python manage.py collectstatic --noinput
+
+RUN chmod +x start.sh
 
 EXPOSE 8000
 
-# Use daphne (ASGI) for WebSocket + HTTP support in production
-CMD ["sh", "-c", "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application"]
+# start.sh handles: migrate → seed if empty → daphne
+CMD ["./start.sh"]
