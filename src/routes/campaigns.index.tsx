@@ -56,7 +56,7 @@ function Campaigns() {
     ordering: "-created_at",
   });
 
-  const campaigns = data ?? [];
+  const campaigns = Array.isArray(data) ? data : (data?.results ?? []);
 
   return (
     <div className="flex min-h-screen flex-col">

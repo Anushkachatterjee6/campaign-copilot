@@ -63,7 +63,7 @@ In your GitHub repo → **Settings → Secrets and variables → Actions → New
 |---|---|
 | `HF_TOKEN` | Your HuggingFace access token (`hf_...`) |
 | `HF_USERNAME` | Your HuggingFace username |
-| `HF_SPACE_NAME` | `campaign-copilot-api` |
+| `HF_SPACE` | `campaign-copilot-api` |
 
 ---
 

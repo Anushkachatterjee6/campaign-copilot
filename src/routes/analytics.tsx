@@ -16,7 +16,7 @@ import {
   Funnel,
   LabelList,
 } from "recharts";
-import { Send, MailOpen, MousePointerClick, CheckCircle2, Inbox, Sparkles } from "lucide-react";
+import { Send, MailOpen, MousePointerClick, CheckCircle2, Inbox, Sparkles, AlertCircle } from "lucide-react";
 
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -35,10 +35,10 @@ export const Route = createFileRoute("/analytics")({
   component: Analytics,
 });
 
-const COLORS = ["hsl(217 91% 60%)", "hsl(160 84% 39%)", "hsl(38 92% 50%)", "hsl(280 80% 60%)"];
+const COLORS = ["hsl(217, 91%, 60%)", "hsl(160, 84%, 39%)", "hsl(38, 92%, 50%)", "hsl(280, 80%, 60%)"];
 
 function Analytics() {
-  const { data: analytics, isLoading } = useAnalyticsCharts();
+  const { data: analytics, isLoading, isError, error } = useAnalyticsCharts();
   
   const funnel = analytics?.funnel ?? [
     { stage: "Sent", value: 0 },
@@ -64,6 +64,21 @@ function Analytics() {
     <div className="flex min-h-screen flex-col">
       <Topbar title="Analytics" description="Full-funnel performance across every channel." />
       <main className="flex-1 space-y-6 p-4 md:p-6">
+        {isError && (
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+            <p className="font-semibold flex items-center gap-2 mb-1">
+              <AlertCircle className="h-4 w-4" />
+              API Connection Failed
+            </p>
+            <p className="opacity-90">
+              The analytics page failed to load data from the backend. If you are on Vercel, ensure that <strong>VITE_API_BASE_URL</strong> is correctly set in your environment variables.
+            </p>
+            <p className="mt-2 text-xs font-mono opacity-70">
+              Error details: {(error as Error)?.message}
+            </p>
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard label="Sent" value={formatNum(analyticsCards.sent)} delta={5.4} icon={Send} />
           <StatCard label="Delivered" value={formatNum(analyticsCards.delivered)} delta={4.9} icon={Inbox} />

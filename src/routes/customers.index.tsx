@@ -364,7 +364,7 @@ function Customers() {
   const [modalOpen, setModalOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useCustomers({ search: search || undefined });
-  const allCustomers = data ?? [];
+  const allCustomers = Array.isArray(data) ? data : (data?.results ?? []);
 
   // Client-side health filtering
   const filtered = healthFilter === "all"

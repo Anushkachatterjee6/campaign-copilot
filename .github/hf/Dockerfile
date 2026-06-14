@@ -19,6 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY --chown=user . .
 
 # Collect static files at build time (no DB needed for this step)
+ENV DJANGO_SECRET_KEY=build-time-placeholder \
+    DJANGO_DEBUG=false
 RUN python manage.py collectstatic --noinput
 
 RUN chmod +x start.sh
