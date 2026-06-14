@@ -1,0 +1,64 @@
+name: Deploy backend to HuggingFace Spaces
+
+# Triggers: any push to master/main that touches the backend OR this workflow
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-hf.yml'
+      - '.github/hf/**'
+  workflow_dispatch:   # Manual trigger from GitHub Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare HuggingFace deployment bundle
+        run: |
+          mkdir -p hf_deploy
+
+          # Copy all backend source (exclude dev-only files)
+          rsync -av \
+            --exclude '__pycache__' \
+            --exclude '*.pyc' \
+            --exclude '*.pyo' \
+            --exclude '.env' \
+            --exclude 'db.sqlite3' \
+            --exclude 'staticfiles/' \
+            --exclude '.pytest_cache/' \
+            backend/ hf_deploy/
+
+          # Replace with HF-specific Dockerfile and README
+          cp .github/hf/Dockerfile hf_deploy/Dockerfile
+          cp .github/hf/README.md  hf_deploy/README.md
+
+          echo "--- Files to be deployed ---"
+          find hf_deploy -type f | sort
+
+      - name: Push to HuggingFace Space
+        env:
+          HF_TOKEN:      ${{ secrets.HF_TOKEN }}
+          HF_USERNAME:   ${{ secrets.HF_USERNAME }}
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name  "GitHub Actions"
+
+          cd hf_deploy
+          git init -b main
+          git add --all
+          COMMIT_SHA=$(git -C .. rev-parse --short HEAD)
+          git commit -m "Deploy $(date -u +'%Y-%m-%d %H:%M UTC') (${COMMIT_SHA})"
+
+          git push --force \
+            "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE_NAME}" \
+            main
+
+          echo ""
+          echo "✅ Deployed to: https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE_NAME}"
+          echo "🌐 API URL:     https://${HF_USERNAME}-${HF_SPACE_NAME}.hf.space"
