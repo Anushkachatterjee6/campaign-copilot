@@ -54,16 +54,16 @@ jobs:
           
           echo "Uploading files to Hugging Face Space..."
           huggingface-cli upload "${HF_USERNAME}/${HF_SPACE}" ./hf_deploy / --repo-type space --token "${HF_TOKEN}" > hf_upload_log.txt 2>&1 || {
-             echo "Upload failed! Pushing log to error branch..."
+             echo "Upload failed! Committing log to master..."
+             git checkout master
+             git pull origin master
+             mv hf_upload_log.txt HF_ERROR.log
+             git add HF_ERROR.log
              git config user.email "github-actions@github.com"
              git config user.name "GitHub Actions"
-             git checkout -b deploy-error
-             mv hf_upload_log.txt error.log
-             git add error.log
-             git commit -m "Deployment error log"
-             git push -f origin deploy-error
+             git commit -m "chore: save deployment error [skip ci]"
+             git push origin master
              exit 1
           }
           
           echo "✅ Deployed to: https://huggingface.co/spaces/$HF_USERNAME/$HF_SPACE"
-          echo "🌐 API URL:     https://$HF_USERNAME-$HF_SPACE.hf.space"
