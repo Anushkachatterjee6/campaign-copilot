@@ -73,26 +73,30 @@ jobs:
         run: |
           set -euo pipefail
 
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions"
+          python -m pip install --upgrade pip
+          pip install huggingface_hub
 
-          echo "Cloning Hugging Face Space..."
-          git clone "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE}" hf_repo
+          python <<'PY'
+          import os
+          import sys
+          from huggingface_hub import HfApi
 
-          echo "Syncing deployment bundle into Space repository..."
-          find hf_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-          cp -a hf_deploy/. hf_repo/
+          username = os.environ["HF_USERNAME"]
+          space = os.environ["HF_SPACE"]
+          token = os.environ["HF_TOKEN"]
+          repo_id = f"{username}/{space}"
+          sha = os.environ.get("GITHUB_SHA", "")[:7]
 
-          cd hf_repo
-          git add --all
-          if git diff --staged --quiet; then
-            echo "No file changes detected — skipping commit."
-          else
-            git commit -m "Deploy $(date -u +'%Y-%m-%d %H:%M UTC') (${GITHUB_SHA::7})"
-          fi
-
-          echo "Pushing to Hugging Face..."
-          git push origin HEAD:main
+          api = HfApi(token=token)
+          print(f"Uploading bundle to spaces/{repo_id} ...")
+          api.upload_folder(
+              folder_path="hf_deploy",
+              repo_id=repo_id,
+              repo_type="space",
+              commit_message=f"Deploy {sha}" if sha else "Deploy from GitHub Actions",
+          )
+          print(f"Deployed to https://huggingface.co/spaces/{repo_id}")
+          PY
 
           echo "✅ Deployed to: https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE}"
           echo "🌐 API URL:     https://${HF_USERNAME}-${HF_SPACE}.hf.space"
